@@ -1,0 +1,6 @@
+.devcontainer/devcontainer.json !text !filter !merge !diff
+analysis/Cap_coords_all.xls !text !filter !merge !diff
+analysis/cap_map.jpeg !text !filter !merge !diff
+analysis/s13_b2_t14.csv !text !filter !merge !diff
+data/pilots/pilot_26July2023/EM_Pilot_07_26_2023_14_53_26_results.csv !text !filter !merge !diff
+renv/settings.json !text !filter !merge !diff
