@@ -1,0 +1,23 @@
+Package: rutils
+Title: Utilties for Analysing Data from Project Purple
+Version: 0.0.0
+Authors@R: 
+    person(given = "Mark", 
+           family = "Andrews", 
+           email = "mark.andrews@ntu.ac.uk", 
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-7499-9521"))
+Description: Utilities for reading, processing, exploring, and modelling EEG and
+  behavioural data from Project Purple. Project Purple is an EEG based experimental 
+  investigation of the human Approximate Number System (ANS).
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Imports: 
+    dplyr (>= 1.1.2),
+    lubridate (>= 1.9.2),
+    magrittr,
+    purrr (>= 1.0.1),
+    rjson (>= 0.2.21),
+    tibble
