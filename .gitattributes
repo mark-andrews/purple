@@ -1,3 +1,6 @@
+*.bdf filter=lfs diff=lfs merge=lfs -text
+*.json filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text
 .devcontainer/devcontainer.json !text !filter !merge !diff
 analysis/Cap_coords_all.xls !text !filter !merge !diff
 analysis/cap_map.jpeg !text !filter !merge !diff
