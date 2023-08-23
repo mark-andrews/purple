@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
+pyutils/.ipynb_checkpoints
+pyutils/__pycache__
