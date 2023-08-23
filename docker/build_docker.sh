@@ -1,3 +1,4 @@
 #!/bin/bash
 
-docker build -t "xmjandrews/constable-build-env:$(date +'%y%m%d')" .
+docker build -t "xmjandrews/purple-env:$(date +'%y%m%d')" .
+

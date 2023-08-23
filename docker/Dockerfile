@@ -1,53 +1,30 @@
-FROM archlinux:base-20220731.0.71623
+FROM ubuntu:mantic-20230712
 
-RUN sed -i 's/^\(NoExtract.*\)/#\1/g' /etc/pacman.conf
+# Install minimal Ubuntu system
+RUN apt-get update --yes && \
+    apt-get upgrade --yes && \
+    apt-get install --yes --no-install-recommends \
+    ca-certificates \
+    locales \
+    sudo \
+    less \
+    python3.11 \
+    python3.11-venv && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    echo "en_GB.UTF-8 UTF-8" > /etc/locale.gen && \
+    locale-gen
 
-ENV TZ=Europe/London
+ENV VENV=/opt/venv
+RUN python3 -m venv $VENV 
+ENV PATH="$VENV/bin:$PATH"
 
-# install the linux packages
-RUN pacman -Syu --noconfirm \
-    && pacman -S --noconfirm \
-       base-devel \
-       vim \
-       texlive-bin \
-       texlive-core \
-       texlive-bibtexextra \
-       texlive-fontsextra \
-       texlive-formatsextra \
-       texlive-latexextra \
-       texlive-pictures \
-       texlive-science \
-       texlive-publishers \
-       texlive-pstricks \
-       texlive-pictures \
-       gcc-fortran \
-       libgit2 \
-       git \
-       openblas \
-       pandoc \
-       pandoc-crossref \
-       r \
-       cmake \
-       nlopt \
-       tcl \
-       tk 
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-# install extra latex fonts
-RUN curl --remote-name https://www.tug.org/fonts/getnonfreefonts/install-getnonfreefonts \
-    && texlua install-getnonfreefonts \
-    && getnonfreefonts --sys --all
 
-# install necessary R packages
-ADD install_packages.R .
-RUN Rscript ./install_packages.R
+#RUN useradd -m purple
+#USER purple
+RUN mkdir -p /home/purple
+WORKDIR /home/purple
 
-# install other packages, not recompiling tidyverse each time
-ADD install_other_packages.R .
-RUN Rscript ./install_other_packages.R
-
-# install the isdsr package
-ADD install_isdsr.R .
-RUN Rscript ./install_isdsr.R
-
-RUN mkdir /build
-WORKDIR /build
+ENTRYPOINT ["jupyter", "lab", "--allow-root", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--LabApp.token=''"]
