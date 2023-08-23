@@ -1,0 +1,6 @@
+jupyter
+mne
+numpy
+pandas
+scipy
+jupytext
