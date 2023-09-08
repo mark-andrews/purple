@@ -1,0 +1,1 @@
+We have 2x 128- ABCD electrode system (each of these is 4x 32-pins cables: P32-ABC-ACMS; P32-ABC-B; P32-ABC-C; P32-ABC-D) and 1x 32- P32-1020-32ACMS and 1x CMS-DRL cord (CMSDRL PIN). More detail here: https://www.biosemi.com/pin_electrode.htm
