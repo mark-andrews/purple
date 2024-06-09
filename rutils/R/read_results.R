@@ -112,7 +112,11 @@ read_behavioural_results <- function(behavioural_results_dir){
     tidyr::nest() |>
     dplyr::ungroup() |>
     dplyr::arrange(datetime) |>
-    dplyr::mutate(subject = stringr::str_c('s', seq(n()))) |>
+    dplyr::mutate(
+      subject = stringr::str_c('s', seq(n())),
+      # sort `subject` by s1, s2, s3 ... and not s1, s10, s11
+      subject = factor(subject, levels = stringr::str_c('s', seq(n())))
+    )|>
     tidyr::unnest(data) |>
     relocate(subject, .after = participant)
 
