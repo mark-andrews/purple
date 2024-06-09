@@ -38,6 +38,10 @@ edf_obj = eegutils.read_raw_bdf(bdf_filename)
 #edf_obj = edf_obj.set_eeg_reference(ref_channels='average', verbose = False)
 # -
 
+edf_obj.ch_names
+
+edf_obj
+
 # events = eegutils.get_events(edf_obj)
 # trial_info = eegutils.get_trial_info_from_events(events, trigger_dict)
 ch_names = edf_obj.ch_names[:64]
