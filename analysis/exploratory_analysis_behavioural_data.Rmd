@@ -1,0 +1,135 @@
+---
+title: "Preliminary data exploration"
+author: "Mark Andrews"
+date: "`r Sys.Date()`"
+output: powerpoint_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, dpi = 1000)
+```
+
+```{r}
+library(tidyverse)
+library(purputils)
+library(here)
+
+behav_df <- read_behavioural_results(here("raw-data/aug_sept_2023/"))
+
+# Dots task accuracy ------------------------------------------------------
+
+# avg accuracy for each subject for each dots delta (difference in number of
+# dots in the two arrays)
+dots_accuracy_summary_df <-
+  behav_df %>%
+  filter(type == "dots") %>%
+  mutate(delta = abs(left_size - right_size)) %>%
+  drop_na() %>%
+  group_by(subject, delta) %>%
+  summarize(accuracy = mean(accuracy), .groups = "drop")
+
+dots_rt_summary_df <-
+  behav_df %>%
+  filter(type == "dots") %>%
+  mutate(delta = abs(left_size - right_size)) %>%
+  drop_na() %>%
+  group_by(subject, delta, accuracy) %>%
+  summarize(rt = mean(rt), .groups = "drop")
+
+blobs_accuracy_summary_df <-
+  behav_df %>%
+  filter(type == "blobs") %>%
+  mutate(delta = abs(left_size - right_size)) %>%
+  drop_na() %>%
+  mutate(delta = ntile(delta, 10)) %>%
+  group_by(subject, delta) %>%
+  summarize(accuracy = mean(accuracy), .groups = "drop")
+
+blobs_rt_summary_df <-
+  behav_df %>%
+  filter(type == "blobs") %>%
+  mutate(delta = abs(left_size - right_size)) %>%
+  drop_na() %>%
+  mutate(delta = ntile(delta, 10)) %>%
+  group_by(subject, delta, accuracy) %>%
+  summarize(rt = mean(rt), .groups = "drop")
+```
+
+## Average accuracy on dots trials
+
+```{r}
+dots_accuracy_summary_df %>%
+  ggplot(aes(x = delta, y = accuracy)) +
+  geom_line(aes(group = subject),
+    stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), alpha = 0.33, linetype = "dashed"
+  ) +
+  geom_line(stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), colour = "red", size = 1.5) +
+  scale_y_continuous(breaks = seq(0, 1, by = 0.25), limits = c(0, 1.1)) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(x = "Dot count difference")
+```
+
+The x-axis shows the difference in the number of dots in the two arrays.
+
+## Average reaction time on dots trials
+
+```{r}
+# avg rt for *accurate* trials plot as noodle plot
+dots_rt_summary_df %>%
+  ggplot(aes(x = delta, y = rt)) +
+  geom_line(aes(group = subject),
+    stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), alpha = 0.33, linetype = "dashed"
+  ) +
+  geom_line(stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), colour = "red", size = 1.5) +
+  scale_y_continuous(breaks = seq(0, 3, by = 0.25)) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(x = "Dot count difference")
+```
+
+Reaction times for accurate trials.
+
+
+## Average accuracy on blobs trials
+
+```{r}
+# blobs accuracy plot as noodle plot
+blobs_accuracy_summary_df %>%
+  ggplot(aes(x = delta, y = accuracy)) +
+  geom_line(aes(group = subject),
+    stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), alpha = 0.33, linetype = "dashed"
+  ) +
+  geom_line(stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), colour = "red", size = 1.5) +
+  scale_y_continuous(breaks = seq(0, 1, by = 0.25), limits = c(0, 1.1)) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(x = "Blob size difference decile")
+```
+
+
+The x-axis shows the decile of the difference in the size of the two blobs (e.g., decile 1 is blob pairs whose size differences are below the 10th percentile)
+
+## Average reaction time on blobs trials
+
+```{r}
+# avg rt for *accurate* trials plot as noodle plot
+blobs_rt_summary_df %>%
+  ggplot(aes(x = delta, y = rt)) +
+  geom_line(aes(group = subject),
+    stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), alpha = 0.33, linetype = "dashed"
+  ) +
+  geom_line(stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), colour = "red", size = 1.5) +
+  scale_y_continuous(breaks = seq(0, 2.5, by = 0.25)) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(x = "Blob size difference decile")
+```
+
+
+## Statistical analysis method
+
+* For each electrode, we perform a multilevel (across trials, across participants) nonlinear regression model of the ERP. 
+* For each electrode, this model tells us the average ERP waveform, and how this waveform varies across trials and across participants.
+* We perform these multilevel models for the dots task and the blobs task separately.
+* We can then identify the electrodes, and time points, where the ERP waveform on dots task (where counting takes places) differences from the blobs task (which is an almost identical task, but no counting takes place).
