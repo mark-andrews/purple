@@ -2,13 +2,13 @@
 
 VENV=$HOME/var/venvirons/purple
 
-if [ -d $VENV ]; then
-	rm -rf $VENV
+if [ -d "$VENV" ]; then
+  rm -rf "$VENV"
 fi
 
-virtualenv $VENV
+python -m venv "$VENV"
 
-source $VENV/bin/activate
+source "$VENV/bin/activate"
 
 pip install mne
 pip install numpy
