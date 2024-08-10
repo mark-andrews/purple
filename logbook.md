@@ -1,3 +1,9 @@
+# 10 August, 2024; 15:00
+
+* At around 1pm today, added all the raw EEG data files, using their original filenames.
+* Pushed them to GitHub. Upload took around 2 hours.
+
+
 # 9 June, 2024; 21:48
 
 * Did a preliminary exploratory analysis of the behavioural data.
@@ -13,6 +19,7 @@
 * I have not added the EEG data files yet due to some trouble downloading them from OneDrive, which I did not persist with due to the fact that I don't need to do any EEG analysis immediately.
 * I have updated the R utilities package, renamed purputils, to include a function to read in all behavioural data json files from a single directory in one command, amongst some other changes (see Git repo log).
 * I have updated the top level readme to provide a bit more guidance of how to set things up and start doing analysis.
+
 
 # 9 June, 2024; 14:16
 
