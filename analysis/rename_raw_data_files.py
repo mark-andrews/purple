@@ -19,7 +19,7 @@ import os
 # %%
 import re
 
-DATA_DIR = "raw-data/aug_sept_2023"
+DATA_DIR = "raw-data/main"
 
 
 def dir_ls(dirname, ext=None):
