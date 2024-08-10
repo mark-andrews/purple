@@ -10,10 +10,6 @@ python -m venv "$VENV"
 
 source "$VENV/bin/activate"
 
-pip install mne
-pip install numpy
-pip install scipy
-pip install pandas
-pip install jupyter
-pip install jupytext
-pip install pyarrow
+# upgrade pip 
+pip install -U pip
+pip install -r requirements.txt

@@ -1,0 +1,11 @@
+pyhere # like R's `here` for relative paths
+neovim # for writing Python code in neovim
+isort  # also for Python in neovim
+debugpy # also for Python in neovim
+mne
+numpy
+scipy
+pandas
+jupyter
+jupytext
+pyarrow
