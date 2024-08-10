@@ -4,6 +4,15 @@
 
 This project involves nonlinear regression modeling of ERP signals when people are performing an approximate number system task.
 
+## Raw data
+
+The behavioural data is from a PsychoPy based approximate number system experiment available in the GitHub repo `mark-andrews/adak`, version `0.1-0-g7310f94` (i.e. tage 0.1; short commit hash 7310f94).
+All the behavioural data files are the json files in `raw-data`.
+
+The EEG data are also in `raw-data`.
+
+More information about the data to follow.
+
 ## Data analysis
 
 The data analysis is a R and Python based.
