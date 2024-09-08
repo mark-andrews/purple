@@ -2,5 +2,10 @@
 .Rhistory
 .RData
 .Ruserdata
-*/.ipynb_checkpoints
-*/__pycache__
+.snakemake
+.virtual_documents
+.spyproject
+**/.ipynb_checkpoints
+**/__pycache__
+*.feather
+data/main/combined_behaviour_data.csv

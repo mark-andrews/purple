@@ -4,22 +4,23 @@
 \alias{read_behavioural_results}
 \title{Import all behavioural data}
 \usage{
-read_behavioural_results(behavioural_results_dir)
+read_behavioural_results(results_json_files)
 }
 \arguments{
-\item{behavioural_results_dir}{The directory that contains the _results.json behavioral data files.}
+\item{results_json_files}{A list or vector of file names of the json results
+files. Use, for example, \code{fs::dir_ls(behavioural_results_dir, glob = '*.json')} to get this list.}
 }
 \value{
-A date frame that concatenates the data frames from all subjects
+A data frame that concatenates the data frames from all subjects
 }
 \description{
 Read in each behavioural results json file that is in the results directory.
-Concatenate the resulting data frames. Create a new "subject" data frame with
+Concatenate the resulting data frames. Create a new "subject" variable with
 values s1, s2, ... sn where s1 is the first participant by date, s2 is the
 second, and so on.
 }
 \examples{
 \dontrun{
-data_df <- read_behavioural_results("foo_results_dir")
+data_df <- read_behavioural_results(json_results_file_list)
 }
 }

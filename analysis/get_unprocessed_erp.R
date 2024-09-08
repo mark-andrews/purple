@@ -1,48 +1,66 @@
 library(tidyverse)
-epochs <- arrow::read_feather('pyutils/epochs_7_sept.feather') %>% 
+epochs <- arrow::read_feather('data/main/epochs_8_sept_2024.feather') %>% 
   select(-contains('index_level_')) %>% 
-  relocate(subject) %>% 
+  relocate(subject) 
+
+averaged_epochs <- epochs %>% 
+  group_by(time, stimulus) %>% 
+  summarise(across(A1:B32, mean)) %>% 
   pivot_longer(cols = A1:B32,
                names_to = 'channel',
-               values_to = 'volts')
-
-arrow::write_feather(epochs, 'pyutils/epochs_7_sept_pivot.feather')
-
-epochs <- arrow::read_feather('pyutils/epochs_7_sept_pivot.feather')
-
-average_epochs <- epochs %>% group_by(channel, time, stimulus) %>% summarize(y = mean(volts), .groups = 'drop') %>% 
+               values_to = 'volts') %>% 
   mutate(channel = factor(channel, levels = c(str_c('A', seq(32)), str_c('B', seq(32))), ordered = TRUE))
-      
-average_epochs %>% 
-  filter(time <= 500, channel != 'B29') %>% 
-  ggplot(aes(x = time, y = y, colour = stimulus)) + geom_line() + 
-  facet_wrap(~channel)  #, scales = 'free_y') + theme(axis.text.y = element_blank())
 
-average_epochs_wa_23 <- 
+averaged_epochs %>% 
+  filter(time <= 500) %>%
+  ggplot(aes(x = time, y = volts, colour = stimulus)) + geom_line() + 
+  facet_wrap(~channel, scales = 'free') +
+  scale_x_continuous(breaks = seq(-100, 1000, by = 100)) +
+  theme_minimal() +
+  theme(
+    axis.text.y=element_blank(), 
+    axis.ticks.y=element_blank()) 
 
-plot_one_subject <- function(subject_id = 'WA__08_23_2023_09_39_23', free = F){
+
+
+averaged_epochs %>% 
+  group_by(time, stimulus) %>% 
+  summarise(volts = mean(volts)) %>% 
+  filter(time <= 500) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = time, y = volts, colour = stimulus)) + geom_line() + 
+  scale_x_continuous(breaks = seq(-100, 500, by = 100)) +
+  theme_minimal() +
+  theme(
+    axis.text.y=element_blank(), 
+    axis.ticks.y=element_blank()) 
+
+# what is avg volt before time = 0 for each stimulus type?
+baseline_avg <- averaged_epochs %>% 
+  group_by(time, stimulus) %>% 
+  summarise(volts = mean(volts), .groups = 'drop') %>% 
+  filter(time <= 500) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = stimulus, values_from = volts) %>% 
+  filter(time < 0) %>% 
+  select(-time) %>% 
+  colMeans()
   
-  if (free) {scales = 'free_y'} else {scales = 'fixed'}
-  
-  epochs %>%
-    filter(subject == subject_id) %>% 
-    group_by(channel, time, stimulus) %>% summarize(y = mean(volts), .groups = 'drop') %>% 
-    mutate(channel = factor(channel, levels = c(str_c('A', seq(32)), str_c('B', seq(32))), ordered = TRUE)) %>% 
-    filter(time <= 500) %>% #, channel != 'B29') %>% 
-    ggplot(aes(x = time, y = y, colour = stimulus)) + geom_line() + 
-    facet_wrap(~channel, scales = scales) + ggtitle(subject_id)  + theme(axis.text.y = element_blank())
-}
 
-'TA__08_29_2023_14_16_18
-ThA__08_24_2023_12_13_47
-ThB__08_24_2023_14_08_22
-WA__08_23_2023_09_39_23
-WB__08_23_2023_12_39_15
-WC__08_23_2023_14_48_19'
-
-
-epochs %>%
-  filter(subject == 'WA__08_23_2023_09_39_23', channel == 'B2') %>% 
-  group_by(time, stimulus) %>% summarize(y = mean(volts), .groups = 'drop') %>% 
-  ggplot(aes(x = time, y = y, colour = stimulus)) + geom_line() + 
-  ggtitle('WA0823 A2')
+averaged_epochs %>% 
+  group_by(time, stimulus) %>% 
+  summarise(volts = mean(volts), .groups = 'drop') %>% 
+  filter(time <= 500) %>% 
+  ungroup() %>% 
+  mutate(
+    volts = case_when(
+      stimulus == 'dots' ~ volts - baseline_avg['dots'],
+      stimulus == 'blobs' ~ volts - baseline_avg['blobs'])
+  ) %>% 
+  ggplot(aes(x = time, y = volts, colour = stimulus)) + geom_line(size = 3) + #geom_smooth(method = 'gam', se = F, formula = y ~ s(x, bs = "tp")) + 
+  scale_x_continuous(breaks = seq(-100, 500, by = 100)) +
+  theme_minimal() +
+  theme(
+    axis.text.y=element_blank(), 
+    axis.ticks.y=element_blank()) +
+  ggtitle("Average over all channels")

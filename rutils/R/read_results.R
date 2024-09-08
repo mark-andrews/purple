@@ -60,7 +60,7 @@ read_results_json <- function(results_json_file){
                     # convert the datetime to a dttm type
                     datetime = lubridate::mdy_hms(datetime)
                     ) |>
-      dplyr::relocate(participant, gender, age, handedness, datetime, block, type, sb_trial)
+      dplyr::relocate(participant, gender, age, handedness, datetime, block, type, sb_trials)
   }
 
   # The participant_id variable sometimes has a trailing underscore, e.g. `ThA_`.
@@ -106,23 +106,21 @@ read_results_json <- function(results_json_file){
 #' Import all behavioural data
 #'
 #' Read in each behavioural results json file that is in the results directory.
-#' Concatenate the resulting data frames. Create a new "subject" data frame with
+#' Concatenate the resulting data frames. Create a new "subject" variable with
 #' values s1, s2, ... sn where s1 is the first participant by date, s2 is the
 #' second, and so on.
 #'
-#' @param behavioural_results_dir The directory that contains the _results.json behavioral data files.
+#' @param results_json_files A list or vector of file names of the json results
+#'   files. Use, for example, `fs::dir_ls(behavioural_results_dir, glob = '*.json')` to get this list.
 #'
-#' @return A date frame that concatenates the data frames from all subjects
+#' @return A data frame that concatenates the data frames from all subjects
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' data_df <- read_behavioural_results("foo_results_dir")
+#' data_df <- read_behavioural_results(json_results_file_list)
 #' }
-read_behavioural_results <- function(behavioural_results_dir){
-
-  # get the list of the json results file in the specified directory
-  results_json_files <- fs::dir_ls(behavioural_results_dir, glob = '*_results.json')
+read_behavioural_results <- function(results_json_files){
 
   # Use the `read_results_json` to read the data from each results file into a
   # data frame. Concatenate these data frames together. Record this original
@@ -151,7 +149,7 @@ read_behavioural_results <- function(behavioural_results_dir){
     # the number of unique values of the new subject variable should be
     # the same the number of unique values of the participant variable
     nrow(unique(new_df$subject)) == nrow(unique(new_df$participant)),
-    # And this should be the same as the number of _results.json files
+    # And this should be the same as the number of results json files
     nrow(unique(new_df$subject)) == length(results_json_files),
     # the new_df should be identical to the orig_df except for the new variable
     # and after we move a few variables around
