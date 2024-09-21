@@ -31,17 +31,21 @@ read_results_json <- function(results_json_file){
   # that generated this data.
 
   # After the first element, each subsequent element of the `results` list
-  # corresponds to an experimental block. The `results` sub list in each of
-  # these elements contains trials. Return this block info as a data frame. The
-  # participant unique identifier is a suffix like 'MA' or 'FB', recorded by the
-  # experiment code as `participant_id`, followed by a datetime stamp string,
-  # recorded as `datetime`. These are concatenated here.
+  # corresponds to an experimental block, or rather to a sub-block. Each block
+  # corresponds to two sub-block: one for dots stimuli, and one for blobs
+  # stimuli. The `results` sub list in each of these elements contains trials.
+  # Return this block info as a data frame. The participant unique identifier is
+  # a suffix like 'MA' or 'FB', recorded by the experiment code as
+  # `participant_id`, followed by a datetime stamp string, recorded as
+  # `datetime`. These are concatenated here.
   process_each_block <- function(i){
     results <- results[[i]]
     # the following creates a data frame of all trials in each block
     dplyr::bind_rows(results$results) |>
       dplyr::mutate(block = results$block,
                     type = results$type,
+                    # trial in sub-block (sb)
+                    sb_trials = 1:dplyr::n(),
                     # the participant_id is just the suffix of the participant
                     # unique identifier in itself, it does not uniquely identify
                     # the participant it is concatenated with datetime below to
@@ -56,7 +60,7 @@ read_results_json <- function(results_json_file){
                     # convert the datetime to a dttm type
                     datetime = lubridate::mdy_hms(datetime)
                     ) |>
-      dplyr::relocate(participant, gender, age, handedness, datetime, block, type)
+      dplyr::relocate(participant, gender, age, handedness, datetime, block, type, sb_trial)
   }
 
   # The participant_id variable sometimes has a trailing underscore, e.g. `ThA_`.
@@ -70,11 +74,32 @@ read_results_json <- function(results_json_file){
   # Do some post-processing.
   purrr::map_dfr(seq(2, length(results)),
                  process_each_block) %>%
-    dplyr::mutate(left_larger = left_size > right_size,
-           left_press = key_pressed == 'left',
-           accuracy = left_larger == left_press) |>
-    dplyr::select(-c(left_larger, left_press, rt_time)) |>
-    dplyr::rename(rt = rt_clock)
+    dplyr::mutate(
+      # this is the more clunky, but maybe safer way to calculate
+      # accuracy:
+      # accuracy = dplyr::case_when(
+      #   is.na(key_pressed) ~ FALSE, # no key pressed
+      #   (key_pressed == 'left') & (left_size > right_size) ~ TRUE,
+      #   (key_pressed == 'right') & (right_size > left_size) ~ TRUE,
+      #   (key_pressed == 'left') & (left_size < right_size) ~ FALSE,
+      #   (key_pressed == 'right') & (right_size < left_size) ~ FALSE,
+      #  ),
+      # here is the efficient version
+      # I have compared them and they lead to identical results
+      accuracy = dplyr::case_when(
+        is.na(key_pressed) ~ FALSE, # no key pressed
+        # now, key_pressed is either left or right
+        # and left_size must be either > or < than right_size
+        TRUE ~ (left_size > right_size) == (key_pressed == 'left')
+      ),
+    ) |>
+    dplyr::select(-rt_time) |>
+    dplyr::rename(rt = rt_clock) |>
+    # add trials
+    dplyr::group_by(block) |>
+    dplyr::mutate(trials = 1:dplyr::n()) |>
+    dplyr::ungroup() |>
+    dplyr::relocate(trials, .after = type)
 }
 
 
@@ -113,12 +138,12 @@ read_behavioural_results <- function(behavioural_results_dir){
     dplyr::ungroup() |>
     dplyr::arrange(datetime) |>
     dplyr::mutate(
-      subject = stringr::str_c('s', seq(n())),
+      subject = stringr::str_c('s', seq(dplyr::n())),
       # sort `subject` by s1, s2, s3 ... and not s1, s10, s11
-      subject = factor(subject, levels = stringr::str_c('s', seq(n())))
+      subject = factor(subject, levels = stringr::str_c('s', seq(dplyr::n())))
     )|>
     tidyr::unnest(data) |>
-    relocate(subject, .after = participant)
+    dplyr::relocate(subject, .after = participant)
 
   stopifnot(
     # the new and original data frames should be the same length
