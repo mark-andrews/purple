@@ -228,7 +228,12 @@ class EEG:
         )
 
     def get_epochs(
-        self, lock="stimulus", offsets=(-200, 1000), baseline_correct=True, test=False
+        self,
+        lock="stimulus",
+        offsets=(-200, 1000),
+        re_reference=True,
+        baseline_correct=True,
+        test=False,
     ):
         """
         Note that here, because we are using are to_data_frame, we get
@@ -478,6 +483,16 @@ class EEG:
         epoch_info = self.get_epoch_tics()
         EEG_df = self.raw.to_data_frame(picks=self.ch_names)
 
+        if re_reference:
+            # subtract rowwise average of EEG channels from all channels
+            channel_cols = self.ch_names
+            rowwise_average = EEG_df[channel_cols].mean(axis=1)
+            EEG_df[channel_cols] = EEG_df[channel_cols].sub(rowwise_average, axis=0)
+
+            if test:
+                assert np.allclose(0, EEG_df[channel_cols].mean(axis=1))
+                print("Re-reference to average test passed.")
+
         Epochs = []
         for _, epoch_info_row in epoch_info.iterrows():
             if lock == "response":
@@ -526,6 +541,7 @@ class EEG:
         filt_raw = self.raw.copy().filter(l_freq=1.0, h_freq=100.0, verbose=False)
 
         # re-reference the copy to average
+        # TODO: Do we trust this?
         filt_raw = filt_raw.set_eeg_reference("average", verbose=False)
 
         ica = ICA(
@@ -561,9 +577,6 @@ class EEG:
         ica.apply(self.raw, exclude=exclude_idx)
 
         return None
-
-    def re_reference(self):
-        self.raw = self.raw.set_eeg_reference("average")
 
     def filter(self, highpass=1.0, lowpass=40.0):
         self.raw.filter(l_freq=highpass, h_freq=lowpass)

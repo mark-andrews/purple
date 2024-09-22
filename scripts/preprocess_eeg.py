@@ -30,10 +30,13 @@ eeg_obj = eegutils.EEG(bdf_filepath=bdf_filepath, trigger_dict=trigger_dict)
 eeg_obj.downsample(hz=1024)  # two sessions were recorded at 2048Hz
 eeg_obj.remove_artifacts()
 eeg_obj.filter(highpass=1.0, lowpass=40.0)
-eeg_obj.re_reference()
 
 epochs_df = eeg_obj.get_epochs(
-    lock="stimulus", offsets=(-200, 1000), baseline_correct=True, test=True
+    lock="stimulus",
+    offsets=(-200, 1000),
+    re_reference=True,
+    baseline_correct=True,
+    test=True,
 )
 
 epochs_df.to_feather(output_filepath)
