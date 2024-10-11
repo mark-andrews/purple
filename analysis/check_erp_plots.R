@@ -1,6 +1,19 @@
 library(tidyverse)
 
-xyz <- arrow::read_feather('data/main/merged_eeg_behaviour_data.feather')
+xyz <- arrow::read_feather('data/main/merged_eeg_behaviour_data.feather')  
+ 
+# flag the very high or low variance channels for deletion
+xyz_drop_channels <- xyz %>% 
+  filter(!drop) %>% 
+  group_by(subject, block, trials) %>%
+  # variance on each trial for each subject
+  summarise(across(Fp1:O2, var)) %>%
+  ungroup() %>% 
+  pivot_longer(cols = Fp1:O2, 
+               names_to = 'channel', 
+               values_to = 'variance') %>% 
+  mutate(drop2 = (variance > quantile(variance, probs = 0.999)) |
+           (variance < quantile(variance, probs = 1 - 0.999)))
 
 averaged_epochs <- xyz %>% 
   group_by(time, type) %>% 
@@ -52,7 +65,23 @@ plot_subject_channel <- function(s, channel){
     ggplot(aes(x = time, y = volts, colour = type)) + geom_line() +
     ggtitle(msg)
 }
-
+plot_subject_channel2 <- function(s, channel){
+  msg <- glue::glue('Subject {s}, channel {ensym(channel)}.')
+  xyz %>% 
+    filter(subject == s) %>% 
+    unite('xy', block, trials) %>% 
+    group_by(xy, time) %>% 
+    summarise(volts = mean({{channel}}), .groups = 'drop') %>% 
+    ungroup() %>%
+    group_by(xy) %>%
+    nest(data = c(time,volts)) %>%
+    ungroup() %>% 
+    sample_n(50) %>%
+    unnest(data) %>% 
+    ggplot(aes(x = time, y = volts)) + geom_line() +
+      facet_wrap(~xy) +
+    ggtitle(msg)
+}
 plot_subject <- function(s){
   msg <- glue::glue('Subject {s}')
   xyz %>% 
@@ -67,7 +96,7 @@ plot_subject <- function(s){
 
 # average per-trial variance of each channel
 xyz_1 <- xyz %>%
-  group_by(subject, block, type, sb_trials) %>%
+  group_by(subject, block, trials) %>%
   # variance on each trial for each subject
   summarise(across(Fp1:O2, var)) %>%
   ungroup() %>% 
@@ -90,13 +119,18 @@ xyz_1 <- xyz %>%
 #   
 plot_subject <- function(s){
   xyz %>% 
+    filter(!drop) %>% 
     filter(subject == s) %>% 
-    pivot_longer(cols = Fp1:O2, names_to = 'channel', values_to = 'volts') %>% 
+    pivot_longer(cols = Fp1:O2, names_to = 'channel', values_to = 'volts')# %>% 
+    left_join(select(xyz_drop_channels, -variance),
+              by = c(subject, block, trials, channel)) %>% 
+    filter(!drop2) %>% 
     select(time, channel, volts) %>% 
     group_by(time, channel) %>% 
     summarise(volts = mean(volts), .groups = 'drop') %>% 
     ggplot(aes(x=time,y=volts)) + geom_line() + facet_wrap(~channel)
 }
+
 xyz %>% 
   filter(subject == 's13') %>% 
   pivot_longer(cols = Fp1:O2, names_to = 'channel', values_to = 'volts') %>% 
@@ -124,3 +158,16 @@ xyz_2 <- xyz %>% unite('trials', c(block, sb_trials)) %>%
 xyz_3 <- map(xyz_2, ~pivot_longer(., cols = Fp1:O2, names_to = 'channel', values_to = 'volt'))
 
   
+library(tidyverse)
+x <- arrow::read_feather('foo_not_fix.feather')
+x <- arrow::read_feather('foo_fix.feather') %>% filter(!drop)
+
+x %>% 
+  pivot_longer(cols = Fp1:O2, names_to = 'channel', values_to = 'volts') %>% 
+  select(block, trial, time, channel, volts) %>% 
+  #filter(block == 1, trial == 1)  %>% 
+  group_by(time, channel) %>% 
+  summarise(volts = mean(volts), .groups = 'drop') %>% 
+  filter(channel == 'Fp2') %>% 
+  ggplot(aes(x=time,y=volts))+ geom_line(linewidth=0.5) +   geom_point(size=0.1, colour = 'red') +facet_wrap(~channel) + 
+  scale_x_continuous(breaks = seq(-200, 1000, by = 50))

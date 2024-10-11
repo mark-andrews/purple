@@ -22,8 +22,12 @@ rule process_raw_eeg_data:
         INPUT_DIR + "/{filename}.bdf"
     output:
         temp(TMP_DIR + "/{filename}_epochs.feather")
-    script:
-        "scripts/preprocess_eeg.py" 
+    params:
+      highpass = 1,
+      lowpass = 30,
+      fix_bad = 'yes'
+    shell:
+        "python scripts/preprocess_eeg.py --input {input} --output {output} --fix-bad {params.fix_bad} --filter {params.highpass} {params.lowpass}"
 
 rule combine_epoch_files:
     input:
@@ -39,6 +43,6 @@ rule merge_eeg_behaviour_data:
     OUTPUT_DIR + "/all_preprocessed_epochs.feather"
   output:
     OUTPUT_DIR + "/merged_eeg_behaviour_data.feather"
-  script:
-    "scripts/merge_eeg_behaviour_data.R"
+  shell:
+    "Rscript scripts/merge_eeg_behaviour_data.R {input[0]} {input[1]} {output[0]}"
 

@@ -23,4 +23,5 @@ pip install torch
 pip install mne-icalabel
 pip install seaborn
 pip install spyder-vim
+pip install autoreject
 pip install -r requirements.txt

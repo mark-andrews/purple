@@ -3,6 +3,7 @@ import numpy as np
 from mne.preprocessing import ICA
 from mne_icalabel import label_components
 from pandas import DataFrame, concat, merge
+from autoreject import AutoReject
 
 
 class EEG:
@@ -580,3 +581,107 @@ class EEG:
 
     def filter(self, highpass=1.0, lowpass=40.0):
         self.raw.filter(l_freq=highpass, h_freq=lowpass)
+
+    def fix_bad_channels(self, epochs_df):
+        """
+        Create an mne epoch object from the epochs_df dataframe.
+        Apply AutoReject to the epoch object
+        Rebuild the epochs_df dataframe.
+
+        """
+        info = mne.create_info(
+            ch_names=self.raw.ch_names[:64],
+            ch_types=["eeg"] * 64,
+            sfreq=self.raw.info["sfreq"],
+        )
+
+        epochs_df_list = [
+            epoch_df for _, epoch_df in epochs_df.groupby(["block", "trial"])
+        ]
+
+        # %%
+        epochs_list = []
+        epochs_info = []
+        for epoch_df in epochs_df_list:
+            # TODO: this might be cruft now
+            epochs_info.append(epoch_df.loc[:, "block":"time"])
+            epochs_list.append(epoch_df.loc[:, "Fp1":"O2"].values.T)
+
+        epochs = mne.EpochsArray(np.array(epochs_list), info)
+        epochs.set_montage("biosemi64")
+
+        # autoreject to fix bad channels or drop epochs
+        ar = AutoReject()
+        epochs_clean, cleaning_log = ar.fit_transform(epochs, return_log=True)
+
+        #########################################################################
+        ########## Some tests ###################################################
+        #########################################################################
+
+        epochs_clean_data = epochs_clean.get_data()
+        kept_epochs = epochs_clean.events[:, 0]
+        drop_epochs = cleaning_log.bad_epochs
+        dropped_epochs = np.where(drop_epochs)[0]
+
+        # drop_epochs is a boolean array with the same number of elements
+        # as the number of original epochs
+        assert len(drop_epochs) == len(epochs_df_list)
+
+        # those False elements of drop_epochs are those we keep
+        assert all(np.where(~drop_epochs)[0] == kept_epochs)
+
+        # we should have a list of N data frames
+        # and an array of length N that have their original epochs_df_list indices
+        assert len(epochs_clean_data) == len(kept_epochs)
+
+        # the union of dropped and kept epochs is 0, 1 ... number of original epochs
+        assert set(dropped_epochs).union(kept_epochs) == set(
+            np.arange(len(epochs_df_list))
+        )
+
+        ###############################################################################
+        for i, k in enumerate(kept_epochs):
+            # insert the cleaned dataframe for epoch k
+            # at position k of the epochs_df_list
+
+            # the ith cleaned epoch
+            cleaned_epoch_ith = DataFrame(
+                epochs_clean_data[i].T, columns=epochs_clean.ch_names
+            ).reset_index(drop=True)
+
+            # this is the kth original epoch
+            # so insert ith epoch into position k in the orignal list
+            # TODO: no point in making the dataframe above if we are just going to use values
+            epochs_df_list[k].loc[:, epochs_clean.ch_names] = cleaned_epoch_ith.values
+
+            # Add new column to indicate that this epoch is not dropped
+            epochs_df_list[k]["drop"] = False
+
+        for k in dropped_epochs:
+            epochs_df_list[k]["drop"] = True
+        ###############################################################################
+
+        # do some further checking
+        drops = []
+        keeps = []
+        for i, x in enumerate(epochs_df_list):
+            is_drop = x["drop"].drop_duplicates().values
+            assert len(is_drop) == 1
+
+            if is_drop[0]:
+                drops.append(i)
+            else:
+                keeps.append(i)
+
+        assert set(kept_epochs.tolist()) == set(keeps)
+        assert set(dropped_epochs.tolist()) == set(drops)
+
+        ##################### Return fixed epoch #######################################
+        epochs_df_fixed = concat(epochs_df_list).reset_index(drop=True)
+
+        assert epochs_df.shape == epochs_df_fixed.drop("drop", axis=1).shape, (
+            epochs_df.shape,
+            epochs_df_fixed.drop("drop", axis=1).shape,
+        )
+
+        return epochs_df_fixed
