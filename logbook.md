@@ -7,6 +7,10 @@ This is all part of an effort to make this project as fully reproducible as poss
 
 All entries below are in reverse chronological order.
 
+## 15 October, 2024; 18:11
+
+Add a new preprocessing step using autoreject.
+
 ## 21 September, 2024; 21:55
 
 Remove an ThB_03_21_2024_12_10_57.bdf because this was a copy of ThA on that same date.
