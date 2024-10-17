@@ -7,6 +7,22 @@ This is all part of an effort to make this project as fully reproducible as poss
 
 All entries below are in reverse chronological order.
 
+## 17 October, 2024; 07:49
+
+Starting doing nonlinear regression. Started with one trial for one subject and with one channel.
+Looked at rbf and gp models.
+The two main problems faced so far are:
+
+- GPs are extremely slow; though it looks like optimization and/or variational Bayes etc might be possible with cmdstanr
+- There is high frequency correlated noise, which looks like it needs a separate GP, which is fine in principle, but I have not exactly got it working yet.
+
+Next steps:
+
+- Get a GP model of slow (which is the main focus) and fast (essentially noise) working
+- Get the optimization and/or VB methods working
+- Look at downsampling; maybe that will solve it
+- Look at the GAM models in neurokit
+
 ## 15 October, 2024; 18:11
 
 Add a new preprocessing step using autoreject.
