@@ -39,3 +39,5 @@ The pre-processed EEG and behavioural raw-data is created using snakemake as fol
 ```bash
 snakemake -j4
 ```
+
+Running time: around 2.5 hours (measured on 23 November, 2024)
