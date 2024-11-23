@@ -68,4 +68,5 @@ stopifnot(
 
 # # Write to file -----------------------------------------------------------
 
-arrow::write_feather(eeg_behaviour_merge, sink = args[3])
+# arrow::write_feather(eeg_behaviour_merge, sink = args[3])
+arrow::write_parquet(eeg_behaviour_merge, sink = args[3])
