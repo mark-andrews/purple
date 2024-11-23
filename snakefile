@@ -14,8 +14,8 @@ rule process_behaviour_data:
     expand(INPUT_DIR + "/{filename}.json", filename=behaviour_input_files)
   output:
     OUTPUT_DIR + "/combined_behaviour_data.csv"
-  script:
-    "scripts/process_behaviour_raw_data.R"
+  shell:
+    "Rscript scripts/process_behaviour_raw_data.R --input {input} --output {output}"
 
 rule process_raw_eeg_data:
     input:
