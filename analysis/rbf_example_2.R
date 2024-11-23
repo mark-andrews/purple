@@ -1,7 +1,7 @@
 # Load rstan library
-library(rstan)
-library(cmdstanr)
-library(tidyverse)
+#library(rstan)
+#library(cmdstanr)
+#library(tidyverse)
 
 data_df <- read_csv("analysis/s13_b2_t14.csv")
 
@@ -35,7 +35,7 @@ create_kernel_matrix <- function(X, length_scale, sigma_f) {
   K + diag(nrow(K)) * 1e-6
 }
 Sigma <- create_kernel_matrix(x, length_scale=10, sigma_f=1)
-plot(MASS::mvrnorm(mu = rep(0, length(x)), Sigma = Sigma))
+#plot(MASS::mvrnorm(mu = rep(0, length(x)), Sigma = Sigma))
 
 
 # ===========================================================================
@@ -91,7 +91,7 @@ summary(fit)$summary %>%
 traceplot(fit)
 
 # Extract the posterior samples
-posterior_samples <- rstan::extract(fit)
+#posterior_samples <- rstan::extract(fit)
 
 # Get the predictions
 y_pred <- posterior_samples$y_pred

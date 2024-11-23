@@ -1,6 +1,6 @@
-library(tidyverse)
+#library(tidyverse)
 
-xyz <- arrow::read_feather('data/main/merged_eeg_behaviour_data.feather')  
+#xyz <- arrow::read_feather('data/main/merged_eeg_behaviour_data.feather')  
  
 # flag the very high or low variance channels for deletion
 xyz_drop_channels <- xyz %>% 
@@ -41,7 +41,7 @@ averaged_epochs2 %>%
 # function to plot specific channel for specific subject
 # averaged over all trials
 plot_subject_channel_trials <- function(s, channel){
-  msg <- glue::glue('Subject {s}, channel {ensym(channel)}.')
+#  msg <- glue::glue('Subject {s}, channel {ensym(channel)}.')
   xyz %>% 
     filter(subject == s) %>% 
     group_by(type, time, trials) %>% 
@@ -57,7 +57,7 @@ plot_subject_channel('s34', P10)
 # function to plot specific channel for specific subject
 # averaged over all trials
 plot_subject_channel <- function(s, channel){
-  msg <- glue::glue('Subject {s}, channel {ensym(channel)}.')
+#  msg <- glue::glue('Subject {s}, channel {ensym(channel)}.')
   xyz %>% 
     filter(subject == s) %>% 
     group_by(type, time) %>% 
@@ -66,7 +66,7 @@ plot_subject_channel <- function(s, channel){
     ggtitle(msg)
 }
 plot_subject_channel2 <- function(s, channel){
-  msg <- glue::glue('Subject {s}, channel {ensym(channel)}.')
+#  msg <- glue::glue('Subject {s}, channel {ensym(channel)}.')
   xyz %>% 
     filter(subject == s) %>% 
     unite('xy', block, trials) %>% 
@@ -83,7 +83,7 @@ plot_subject_channel2 <- function(s, channel){
     ggtitle(msg)
 }
 plot_subject <- function(s){
-  msg <- glue::glue('Subject {s}')
+#  msg <- glue::glue('Subject {s}')
   xyz %>% 
     filter(subject == s) %>% 
     pivot_longer(cols = Fp1:O2, names_to = 'channel', values_to = 'volts') %>% 
@@ -141,7 +141,7 @@ xyz %>%
   ggplot(aes(x=time,y=volts,group = xy)) + geom_line() + facet_wrap(~channel)
   
   
-library(lme4)
+#library(lme4)
 # plot_subject_channel(s = 's4', channel = P10)
 result_1 <- lmer(log10(variance) ~  (1|subject) + (1|channel), data = xyz_1)
 result_2 <- lmer(log10(variance) ~  (1|subject:channel) , data = xyz_1)
@@ -158,9 +158,9 @@ xyz_2 <- xyz %>% unite('trials', c(block, sb_trials)) %>%
 xyz_3 <- map(xyz_2, ~pivot_longer(., cols = Fp1:O2, names_to = 'channel', values_to = 'volt'))
 
   
-library(tidyverse)
-x <- arrow::read_feather('foo_not_fix.feather')
-x <- arrow::read_feather('foo_fix.feather') %>% filter(!drop)
+#library(tidyverse)
+#x <- arrow::read_feather('foo_not_fix.feather')
+#x <- arrow::read_feather('foo_fix.feather') %>% filter(!drop)
 
 x %>% 
   pivot_longer(cols = Fp1:O2, names_to = 'channel', values_to = 'volts') %>% 

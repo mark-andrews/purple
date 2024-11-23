@@ -1,6 +1,6 @@
 # Load rstan library
-library(rstan)
-library(tidyverse)
+#library(rstan)
+#library(tidyverse)
 
 data_df <- read_csv("analysis/s13_b2_t14.csv")
 

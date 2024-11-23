@@ -1,5 +1,5 @@
-library(tidyverse)
-epochs <- arrow::read_feather('data/main/epochs_8_sept_2024.feather') %>% 
+#library(tidyverse)
+#epochs <- arrow::read_feather('data/main/epochs_8_sept_2024.feather') %>% 
   select(-contains('index_level_')) %>% 
   relocate(subject) 
 

@@ -1,4 +1,4 @@
-library(tidyverse)
+#library(tidyverse)
 # Set seed for reproducibility
 set.seed(42)
 
@@ -51,7 +51,7 @@ stan_data <- list(
 )
 
 # Call cmdstan ------------------------------------------------------------
-library(cmdstanr)
+#library(cmdstanr)
 mod <- cmdstan_model('analysis/rbf_example_1.stan')
 
 fit_optim <- mod$optimize(data = stan_data, jacobian = TRUE)
@@ -74,7 +74,7 @@ fit_pf$summary() %>%
 # Call rstan --------------------------------------------------------------
 
 # Load rstan library
-library(rstan)
+#library(rstan)
 
 # Fit the Stan model using the data and the Stan model file
 fit <- stan(
