@@ -1,13 +1,13 @@
-#library(tidyverse)
+library(tidyverse)
 
 args <- commandArgs(trailingOnly = TRUE)
 
 print("Reading eeg data")
-#eeg_df <- arrow::read_feather(args[2])
+eeg_df <- arrow::read_feather(args[2])
 print("EEG data read")
 
 print("Read behaviour data")
-#behaviour_df <- readr::read_csv(args[1]) %>%
+behaviour_df <- readr::read_csv(args[1]) %>%
   # remove the participant for whom the EEG data is missing
   filter(participant != "ThB_03_21_2024_12_10_57")
 print("Behaviour data read")
@@ -68,4 +68,4 @@ stopifnot(
 
 # # Write to file -----------------------------------------------------------
 
-#arrow::write_feather(eeg_behaviour_merge, sink = args[3])
+arrow::write_feather(eeg_behaviour_merge, sink = args[3])
