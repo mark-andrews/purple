@@ -1,18 +1,42 @@
+import argparse
 import pandas
 from pathlib import Path
-from snakemake.script import snakemake
 
-fnames = snakemake.input
-output_fname = snakemake.output[0]
+def main():
 
-EPOCH_DF = []
+    parser = argparse.ArgumentParser(description="Combine all preprocessed files.")
 
-for fname in fnames:
-    tmp_df = pandas.read_feather(fname)
-    tmp_df.insert(0, "participant", Path(fname).stem.replace("_epochs", ""))
+    parser.add_argument(
+        "--input",
+        nargs="+",  # Accept one or more inputs
+        required=True,
+        help="Input feather file(s) (space-separated if multiple).",
+    )
 
-    EPOCH_DF.append(tmp_df)
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Output file of the combined data.",
+    )
 
-EPOCHS = pandas.concat(EPOCH_DF)
+    args = parser.parse_args()
 
-EPOCHS.reset_index(drop=True).to_feather(output_fname)
+    # Extract input and output
+    fnames = args.input
+    output_fname = args.output
+
+    # Main logic
+    EPOCH_DF = []
+
+    for fname in fnames:
+        tmp_df = pandas.read_feather(fname)
+        tmp_df.insert(0, "participant", Path(fname).stem.replace("_epochs", ""))
+
+        EPOCH_DF.append(tmp_df)
+
+    EPOCHS = pandas.concat(EPOCH_DF)
+
+    EPOCHS.reset_index(drop=True).to_feather(output_fname)
+
+if __name__ == "__main__":
+    main()

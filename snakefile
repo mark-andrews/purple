@@ -34,8 +34,8 @@ rule combine_epoch_files:
         expand(TMP_DIR + "/{filename}_epochs.feather", filename=eeg_input_files)
     output:
         temp(OUTPUT_DIR + "/all_preprocessed_epochs.feather")
-    script:
-        "scripts/combine_preprocessed_eeg.py"
+    shell:
+        "python scripts/combine_preprocessed_eeg.py --input {input} --output {output}"
 
 rule merge_eeg_behaviour_data:
   input:
