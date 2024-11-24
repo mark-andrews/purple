@@ -113,8 +113,10 @@
     "arrow": {
       "Package": "arrow",
       "Version": "17.0.0.1",
-      "Source": "Repository",
+      "Source": "Local",
       "Repository": "CRAN",
+      "RemoteType": "local",
+      "RemoteUrl": "my_arrow_pkg.tar.gz",
       "Requirements": [
         "R",
         "R6",
@@ -130,7 +132,7 @@
         "utils",
         "vctrs"
       ],
-      "Hash": "14af96cb2973f6a6c220ce9c3e5b02cd"
+      "Hash": "0007dba8ab58541f57a1cad39402edf3"
     },
     "askpass": {
       "Package": "askpass",
