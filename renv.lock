@@ -1136,8 +1136,8 @@
       "Package": "purputils",
       "Version": "0.0.0",
       "Source": "Local",
-      "RemotePkgRef": "local::/home/andrews/gitdev/prof/research/purple/rutils",
       "RemoteType": "local",
+      "RemoteUrl": "./rutils",
       "Requirements": [
         "dplyr",
         "fs",
@@ -1149,7 +1149,7 @@
         "tibble",
         "tidyr"
       ],
-      "Hash": "a8db46e73957f7506d89e01b07b56e71"
+      "Hash": "6d52da60147844b4906e39ea81fe6a58"
     },
     "purrr": {
       "Package": "purrr",
