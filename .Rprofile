@@ -3,4 +3,4 @@
 # And so it will be skipped by others.
 Sys.setenv(RENV_PATHS_LIBRARY = file.path(Sys.getenv("HOME"),"/var/renv/purple/renv/library"))
 
-source("renv/activate.R")
+#source("renv/activate.R")
