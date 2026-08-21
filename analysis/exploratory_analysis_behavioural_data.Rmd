@@ -10,7 +10,12 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, dpi = 1000)
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  dpi = 1000
+)
 ```
 
 ```{r}
@@ -18,7 +23,13 @@ library(tidyverse)
 library(purputils)
 library(here)
 
-behav_df <- read_behavioural_results(here("raw-data/main/"))
+json_files <- list.files(
+  here("raw-data/main/"),
+  pattern = "\\.json$",
+  full.names = TRUE
+)
+
+behav_df <- read_behavioural_results(json_files)
 
 # Dots task accuracy ------------------------------------------------------
 
@@ -64,10 +75,21 @@ blobs_rt_summary_df <-
 ```{r}
 dots_accuracy_summary_df %>%
   ggplot(aes(x = delta, y = accuracy)) +
-  geom_line(aes(group = subject),
-    stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), alpha = 0.33, linetype = "dashed"
+  geom_line(
+    aes(group = subject),
+    stat = "smooth",
+    method = "gam",
+    formula = y ~ s(x, bs = "cs"),
+    alpha = 0.33,
+    linetype = "dashed"
   ) +
-  geom_line(stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), colour = "red", size = 1.5) +
+  geom_line(
+    stat = "smooth",
+    method = "gam",
+    formula = y ~ s(x, bs = "cs"),
+    colour = "red",
+    size = 1.5
+  ) +
   scale_y_continuous(breaks = seq(0, 1, by = 0.25), limits = c(0, 1.1)) +
   theme_minimal() +
   theme(legend.position = "none") +
@@ -82,10 +104,21 @@ The x-axis shows the difference in the number of dots in the two arrays.
 # avg rt for *accurate* trials plot as noodle plot
 dots_rt_summary_df %>%
   ggplot(aes(x = delta, y = rt)) +
-  geom_line(aes(group = subject),
-    stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), alpha = 0.33, linetype = "dashed"
+  geom_line(
+    aes(group = subject),
+    stat = "smooth",
+    method = "gam",
+    formula = y ~ s(x, bs = "cs"),
+    alpha = 0.33,
+    linetype = "dashed"
   ) +
-  geom_line(stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), colour = "red", size = 1.5) +
+  geom_line(
+    stat = "smooth",
+    method = "gam",
+    formula = y ~ s(x, bs = "cs"),
+    colour = "red",
+    size = 1.5
+  ) +
   scale_y_continuous(breaks = seq(0, 3, by = 0.25)) +
   theme_minimal() +
   theme(legend.position = "none") +
@@ -101,10 +134,21 @@ Reaction times for accurate trials.
 # blobs accuracy plot as noodle plot
 blobs_accuracy_summary_df %>%
   ggplot(aes(x = delta, y = accuracy)) +
-  geom_line(aes(group = subject),
-    stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs", sp = 500), alpha = 0.33, linetype = "dashed"
+  geom_line(
+    aes(group = subject),
+    stat = "smooth",
+    method = "gam",
+    formula = y ~ s(x, bs = "cs", sp = 500),
+    alpha = 0.33,
+    linetype = "dashed"
   ) +
-  geom_line(stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs", sp = 500), colour = "red", size = 1.5) +
+  geom_line(
+    stat = "smooth",
+    method = "gam",
+    formula = y ~ s(x, bs = "cs", sp = 500),
+    colour = "red",
+    size = 1.5
+  ) +
   scale_y_continuous(breaks = seq(0, 1, by = 0.25), limits = c(0, 1.1)) +
   theme_minimal() +
   theme(legend.position = "none") +
@@ -120,10 +164,21 @@ The x-axis shows the decile of the difference in the size of the two blobs (e.g.
 # avg rt for *accurate* trials plot as noodle plot
 blobs_rt_summary_df %>%
   ggplot(aes(x = delta, y = rt)) +
-  geom_line(aes(group = subject),
-    stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), alpha = 0.33, linetype = "dashed"
+  geom_line(
+    aes(group = subject),
+    stat = "smooth",
+    method = "gam",
+    formula = y ~ s(x, bs = "cs"),
+    alpha = 0.33,
+    linetype = "dashed"
   ) +
-  geom_line(stat = "smooth", method = "gam", formula = y ~ s(x, bs = "cs"), colour = "red", size = 1.5) +
+  geom_line(
+    stat = "smooth",
+    method = "gam",
+    formula = y ~ s(x, bs = "cs"),
+    colour = "red",
+    size = 1.5
+  ) +
   scale_y_continuous(breaks = seq(0, 2.5, by = 0.25)) +
   theme_minimal() +
   theme(legend.position = "none") +
