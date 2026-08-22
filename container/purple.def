@@ -1,0 +1,104 @@
+Bootstrap: docker
+From: debian:trixie-slim
+
+%files
+    rutils /opt/rutils
+
+%post
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        gnupg \
+        wget \
+        pkg-config \
+        build-essential \
+        gfortran \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        libuv1-dev \
+        libfontconfig-dev \
+        libfreetype-dev \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        libpng-dev \
+        libtiff-dev \
+        libjpeg-dev \
+        python3 \
+        python3-pip \
+        python-is-python3
+
+    # Add the CRAN apt repository so we get a current R release rather than
+    # Debian's older packaged one (per cran.r-project.org/bin/linux/debian/).
+    gpg --keyserver keyserver.ubuntu.com \
+        --recv-key '95C0FAF38DB3CCAD0C080A7BDC78B2DDEABC47B7'
+    gpg --armor --export '95C0FAF38DB3CCAD0C080A7BDC78B2DDEABC47B7' \
+        > /etc/apt/trusted.gpg.d/cran_debian_key.asc
+
+    cat > /etc/apt/sources.list.d/cran.sources <<'EOF'
+Types: deb
+URIs: https://cloud.r-project.org/bin/linux/debian/
+Suites: trixie-cran46/
+Components:
+Signed-By: /etc/apt/trusted.gpg.d/cran_debian_key.asc
+EOF
+
+    apt-get update
+    apt-get install -y --no-install-recommends r-base r-base-dev
+
+    # Python dependencies for scripts/preprocess_eeg.py and
+    # scripts/combine_preprocessed_eeg.py (pyutils/eegutils.py is bind-mounted
+    # at runtime, not installed here).
+    pip3 install --no-cache-dir --break-system-packages \
+        mne \
+        mne-icalabel \
+        autoreject \
+        scikit-learn \
+        onnxruntime \
+        numpy \
+        scipy \
+        pandas \
+        pyarrow \
+        pyhere
+
+    # R dependencies for scripts/process_behaviour_raw_data.R and
+    # scripts/merge_eeg_behaviour_data.R, plus the project's own package.
+    Rscript -e 'install.packages(c("tidyverse", "argparse", "arrow", "rjson", "fs", "lubridate"), repos = "https://cloud.r-project.org")'
+    R CMD INSTALL /opt/rutils
+
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+
+%environment
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export TZ=Europe/London
+    # The repo root (auto-bind-mounted as cwd, and as $HOME when Snakemake's
+    # apptainer directive runs with --home <cwd>) has its own renv-based
+    # .Rprofile for host/interactive use, which sources renv/activate.R.
+    # Setting RENV_CONFIG_AUTOLOADER_ENABLED=FALSE stops renv from switching
+    # library paths, but when HOME == the project directory, renv 1.1.4's
+    # activate.R re-sources itself repeatedly and blows R's recursion limit
+    # ("evaluation nested too deeply"), regardless of that flag. Skip
+    # sourcing .Rprofile inside this image altogether (R_PROFILE_USER
+    # pointed at an always-present, always-empty file) so R processes here
+    # use only the packages installed directly into the image.
+    export R_PROFILE_USER=/dev/null
+
+%labels
+    Project purple
+    Description Container for the Project Purple EEG/behaviour preprocessing pipeline (Snakemake rules: process_raw_eeg_data, combine_epoch_files, process_behaviour_data, merge_eeg_behaviour_data)
+
+%help
+    Apptainer image providing Python (mne, mne-icalabel, autoreject,
+    scikit-learn, onnxruntime, ...) and R (tidyverse, arrow, purputils, ...)
+    for the Project Purple Snakemake pipeline.
+
+    Build:
+        apptainer build --fakeroot container/purple.sif container/purple.def
+
+    Run via Snakemake:
+        snakemake -j4 --sdm apptainer
