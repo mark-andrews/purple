@@ -1,5 +1,0 @@
-# TODO: Change this so that it only runs if there is an environment variable
-# like USE_RENV_VAR or RENV_VAR_DIR.
-# And so it will be skipped by others.
-RENV_PATHS_LIBRARY=${HOME}/var/renv/purple/renv/library
-

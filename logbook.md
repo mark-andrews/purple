@@ -1,3 +1,9 @@
+# 22 August, 2026; 22:07
+
+Removed the host renv/venv bootstrap now that the container covers reproducibility.
+Deleted `.Renviron`, `.Rprofile`, `renv/`, `renv.lock` (renv, superseded by the container for the pipeline), `arrow_install.R` (a scratch file of failed host attempts at getting R's `arrow` package to build, the exact problem the container now solves), and `install.sh`, `.envrc`, `requirements.txt` (the host Python venv bootstrap and its direnv auto-activation, confirmed no longer wanted, not just for the pipeline but for interactive work too).
+`readme.md` never referenced any of these, so no changes needed there.
+
 # 22 August, 2026; 21:08
 
 Fixed the `snakemake -j4` failure from earlier today (host venv broken by the Arch Python 3.13 to 3.14 upgrade, leaving `mne_icalabel`'s ICLabel step without a working backend).
