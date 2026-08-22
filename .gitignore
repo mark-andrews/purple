@@ -9,3 +9,4 @@
 **/__pycache__
 *.feather
 data/main/combined_behaviour_data.csv
+*.sif

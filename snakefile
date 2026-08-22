@@ -1,3 +1,5 @@
+container: "container/purple.sif"
+
 INPUT_DIR = "raw-data/main"
 OUTPUT_DIR = "data/main"
 TMP_DIR = "data/tmp"

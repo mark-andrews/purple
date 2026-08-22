@@ -1,4 +1,25 @@
-# 22 August, 2026; 10:14
+# 22 August, 2026; 21:08
+
+Fixed the `snakemake -j4` failure from earlier today (host venv broken by the Arch Python 3.13 to 3.14 upgrade, leaving `mne_icalabel`'s ICLabel step without a working backend).
+Rather than patch the venv again, containerised the whole pipeline with Apptainer instead of repairing host Python/R state.
+Decisions: Apptainer, not Docker.
+`onnxruntime`, not `torch`, as the ICLabel backend, since nothing else in the repo uses either.
+No `renv` for R, the image itself is the reproducibility mechanism, packages installed straight from CRAN at build time.
+Full pipeline ran to completion under the container: `data/main/merged_eeg_behaviour_data.feather` now exists (23,124,000 rows, 85 columns).
+
+Two real bugs turned up along the way, both fixed:
+
+- `fs`, `systemfonts`, `ragg` and friends need `libuv1-dev`, `libfontconfig-dev`, `libfreetype-dev`, `libharfbuzz-dev`, `libfribidi-dev`, `libpng-dev`, `libtiff-dev`, `libjpeg-dev` to build from source on Debian trixie, not just the curl/ssl/xml dev packages that cover `arrow`.
+- `process_behaviour_data` failed deterministically with "evaluation nested too deeply: infinite recursion" whenever Snakemake ran it under Apptainer.
+Cause: Snakemake's apptainer integration passes `--home <cwd>`, so `$HOME` equals the project directory.
+The repo's own `.Rprofile` sources `renv/activate.R`, and renv 1.1.4's activate script re-sources itself repeatedly when `$HOME` and the project directory coincide, blowing R's expression-nesting limit.
+Setting `RENV_CONFIG_AUTOLOADER_ENABLED=FALSE` was not sufficient, it stops renv from switching library paths but not the repeated re-sourcing.
+Fixed by setting `R_PROFILE_USER=/dev/null` in the container image, so `.Rprofile` is never sourced by R processes running inside it at all.
+This is specific to Apptainer's `--home` behaviour and would not show up running R normally on the host.
+
+`container/purple.def` has the full build recipe.
+`*.sif` is gitignored, rebuild locally with `apptainer build --fakeroot container/purple.sif container/purple.def`.
+`readme.md` updated with build/run instructions.
 
 Priority now is completing as much as possible of the analysis described in the abstract below for the presentation at the BPS Cognitive Section Annual Conference, which is held in Liverpool from 26 to 28 August, 2026.
 

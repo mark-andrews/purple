@@ -34,10 +34,24 @@ The Python and R scripts are in `scripts/`
 
 ### Snakemake
 
-The pre-processed EEG and behavioural raw-data is created using snakemake as follows:
+The pre-processed EEG and behavioural raw-data is created using snakemake.
+The pipeline runs inside an Apptainer container, so it no longer depends on the host's Python or R installation.
+
+First build the image (from the repo root, so the `%files` paths in the definition resolve):
 
 ```bash
-snakemake -j4
+apptainer build --fakeroot container/purple.sif container/purple.def
 ```
 
-Running time: around 2.5 hours (measured on 23 November, 2024)
+This installs Python (`mne`, `mne-icalabel`, `autoreject`, `onnxruntime`, ...) and R (`tidyverse`, `arrow`, `purputils`, ...) into the image.
+It takes a while, mostly spent compiling the R `arrow` package's C++ backend and the rest of `tidyverse` from source.
+
+Then run the pipeline with:
+
+```bash
+snakemake -j4 --sdm apptainer
+```
+
+Running time: around 2.5 hours (measured on 23 November, 2024; container overhead is minor).
+
+The image itself (`container/purple.sif`) is a large binary build artefact and is not tracked in git; rebuild it locally with the command above whenever it is missing.
