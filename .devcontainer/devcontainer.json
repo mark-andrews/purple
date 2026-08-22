@@ -1,0 +1,8 @@
+{
+  "name": "purple-interactive",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "dev",
+  "postCreateCommand": "Rscript -e 'devtools::install_local(\"rutils\")'"
+}
