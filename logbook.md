@@ -5,7 +5,9 @@ Rather than patch the venv again, containerised the whole pipeline with Apptaine
 Decisions: Apptainer, not Docker.
 `onnxruntime`, not `torch`, as the ICLabel backend, since nothing else in the repo uses either.
 No `renv` for R, the image itself is the reproducibility mechanism, packages installed straight from CRAN at build time.
-Full pipeline ran to completion under the container: `data/main/merged_eeg_behaviour_data.feather` now exists (23,124,000 rows, 85 columns).
+Full pipeline ran to completion under the container: `data/main/merged_eeg_behaviour_data.parquet` now exists (23,124,000 rows, 85 columns).
+Renamed from `.feather` to `.parquet`: the file is written with `arrow::write_parquet()`, not `arrow::write_feather()`, so `.feather` was always the wrong extension.
+Updated the Snakefile's output path and `analysis/check_erp_plots.R`'s (commented-out) read call to match.
 
 Two real bugs turned up along the way, both fixed:
 

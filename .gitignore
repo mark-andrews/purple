@@ -8,5 +8,6 @@
 **/.ipynb_checkpoints
 **/__pycache__
 *.feather
+*.parquet
 data/main/combined_behaviour_data.csv
 *.sif

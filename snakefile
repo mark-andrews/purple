@@ -9,7 +9,7 @@ behaviour_input_files = glob_wildcards(INPUT_DIR + "/{filename}.json").filename
 
 rule all:
     input:
-        OUTPUT_DIR + "/merged_eeg_behaviour_data.feather"
+        OUTPUT_DIR + "/merged_eeg_behaviour_data.parquet"
 
 rule process_behaviour_data:
   input:
@@ -44,7 +44,7 @@ rule merge_eeg_behaviour_data:
     OUTPUT_DIR + "/combined_behaviour_data.csv",
     OUTPUT_DIR + "/all_preprocessed_epochs.feather"
   output:
-    OUTPUT_DIR + "/merged_eeg_behaviour_data.feather"
+    OUTPUT_DIR + "/merged_eeg_behaviour_data.parquet"
   shell:
     "Rscript scripts/merge_eeg_behaviour_data.R {input[0]} {input[1]} {output[0]}"
 

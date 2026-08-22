@@ -1,6 +1,6 @@
 #library(tidyverse)
 
-#xyz <- arrow::read_feather('data/main/merged_eeg_behaviour_data.feather')  
+#xyz <- arrow::read_parquet('data/main/merged_eeg_behaviour_data.parquet')
  
 # flag the very high or low variance channels for deletion
 xyz_drop_channels <- xyz %>% 
