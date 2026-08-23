@@ -1,0 +1,126 @@
+---
+title: "EEG preprocessing pipeline"
+subtitle: "From raw BioSemi recordings to the merged single-trial dataset"
+format: html
+---
+
+## Overview
+
+This document describes, step by step, how the raw EEG recordings and behavioural log files are turned into `data/main/merged_eeg_behaviour_data.parquet`, the single dataframe used for all downstream statistical modelling.
+It is a description of what the code does, reconstructed from the Snakemake pipeline (`snakefile`) and the scripts and functions it calls: `scripts/preprocess_eeg.py`, `pyutils/eegutils.py`, `scripts/combine_preprocessed_eeg.py`, and `scripts/merge_eeg_behaviour_data.R`.
+The whole pipeline runs inside the Apptainer container described in `readme.md`, so the steps below reflect a fixed, reproducible sequence, not something that varies run to run.
+
+Processing happens in two independent tracks that are joined at the end.
+The behavioural track reads the PsychoPy JSON log files and produces one combined CSV.
+The EEG track reads each participant's raw BioSemi file separately, epochs it, and the resulting per-participant epoch tables are then concatenated.
+The two tracks are merged on trial-level identifiers in the final step.
+
+## 1. Raw input
+
+Each participant contributes one `.bdf` file (BioSemi Data Format, the native recording format of the BioSemi ActiveTwo system used) and one `.json` file (the PsychoPy behavioural log) in `raw-data/main`.
+The BDF file contains 64 EEG channels, labelled `A1`-`A32` and `B1`-`B32` at the point of recording, plus a `Status` channel that carries the trigger codes described below.
+Two sessions (`WA_11_22_2023_13_54_06.bdf` and `MA_11_20_2023_11_46_10.bdf`) were recorded at 2048 Hz rather than the usual 1024 Hz; this is handled by the downsampling step and does not need separate treatment.
+
+## 2. Channel renaming and montage assignment
+
+`EEG.__init__` in `pyutils/eegutils.py` loads the raw file with `mne.io.read_raw_bdf`, then immediately renames the 64 EEG channels from their connector labels (`A1`...`A32`, `B1`...`B32`) to the standard 10-20/10-10 anatomical labels (`Fp1`, `AF7`, ..., `O2`), using MNE's built-in `biosemi64` standard montage as the mapping.
+It then calls `set_montage("biosemi64")`, which attaches a 3D scalp coordinate to every channel.
+This is the step that turns "channel 14 on the amplifier" into "a specific named position on the head", and it is applied identically to every participant's file, since it depends only on channel order, not on anything read from the data itself.
+See `notes/electrode-labels.md` for what the resulting labels mean.
+
+## 3. Downsampling
+
+`EEG.downsample(hz=1024)` resamples the recording to 1024 Hz if it is currently sampled faster than that, using MNE's `resample`.
+In practice this only affects the two sessions noted above; all others are already at 1024 Hz and pass through unchanged.
+
+## 4. Artefact removal via ICA and ICLabel
+
+`EEG.remove_artifacts` identifies and removes artefactual components (eye movements, blinks, muscle activity, and similar) using Independent Component Analysis.
+This step works on a temporary copy of the data, not the data that is eventually kept:
+
+1. A copy of the raw signal is band-pass filtered (1-100 Hz) and re-referenced to the average of all channels. This copy exists only to give ICA cleaner input; it is discarded afterwards.
+2. Infomax ICA (extended, with the component count left to MNE's default) is fit on that filtered copy, across all 64 EEG channels.
+3. Each resulting independent component is classified by ICLabel (Pion-Tonachini et al., 2019), via `mne_icalabel.label_components`, into categories such as `brain`, `eye`, `muscle`, `heart`, `line noise`, `channel noise`, or `other`.
+4. Any component *not* labelled `brain` or `other` is marked for exclusion.
+5. Those components are then subtracted out of the original, unfiltered raw signal (`ica.apply(self.raw, exclude=...)`), not the filtered copy. The filtering in step 1 was only ever to help ICA find clean components; the actual EEG signal that proceeds to later steps is otherwise unfiltered at this point.
+
+The console output from this step (`"Excluding ICA components ..., with these labels ..."`) records how many components were removed and why, per participant; this is logged but not currently saved to a file.
+
+## 5. Band-pass filtering
+
+`EEG.filter` applies the real, kept band-pass filter to the (now ICA-cleaned) raw signal.
+The Snakemake rule `process_raw_eeg_data` sets this to a 1-30 Hz band-pass (`highpass = 1, lowpass = 30`) for every participant.
+This is separate from, and follows, the 1-100 Hz filter used transiently for ICA fitting in step 4; that earlier filter never touches the data that is kept.
+
+## 6. Trigger decoding
+
+`EEG.get_trigger_array` reads the `Status` channel as a flat integer array.
+`EEG.get_events` finds every timepoint (`tic`) at which the trigger value changes, giving a compact list of `(tic, trigger code)` pairs.
+Single-sample trigger blips, a trigger value that changes for exactly one sample and then reverts, are treated as anomalies and discarded (the `skip` logic).
+The trigger codes themselves are a fixed dictionary, defined in `scripts/preprocess_eeg.py`:
+
+| Label | Code |
+|---|---|
+| `start_experiment` | 20 |
+| `end_experiment` | 24 |
+| `start_block` | 4 |
+| `end_block` | 5 |
+| `show_instructions` | 6 |
+| `start_dot_trial` | 8 |
+| `start_blob_trial` | 10 |
+| `left_response` | 12 |
+| `right_response` | 14 |
+| `no_response` | 18 |
+
+## 7. Trial structure extraction and validation
+
+`EEG.get_epoch_tics` walks the decoded event sequence and reconstructs the block/trial structure, with several assertions that abort the run if the trigger sequence does not have the expected shape.
+It requires exactly one `start_block` and one `end_block` trigger per block, requires every event inside a block to be one of the expected trigger types, and requires that every `start_dot_trial` or `start_blob_trial` trigger is immediately followed by exactly one response trigger (`left_response`, `right_response`, or `no_response`).
+The output is one row per trial, giving the block number, trial number within block, stimulus type (`dots` or `blobs`), response (`left`, `right`, or `None` for no response), and the sample index (`tic`) of both the stimulus onset and the response.
+This step is, in effect, a structural sanity check on the raw trigger stream: if the experiment software ever logged an unexpected or out-of-order event, the pipeline fails loudly here rather than silently producing a misaligned epoch later.
+
+## 8. Epoching, re-referencing, and baseline correction
+
+`EEG.get_epochs` (called with `lock="stimulus"`, `offsets=(-200, 1000)`) builds the single-trial epoch table:
+
+1. The full continuous recording is re-referenced to the average of all 64 EEG channels (the row-wise mean across channels is subtracted from every channel, every timepoint).
+2. For every trial identified in step 7, a window from 200 ms before to 1000 ms after stimulus onset is cut out of the continuous, re-referenced signal.
+3. Each epoch is stamped with a local `time` axis in milliseconds, zeroed at stimulus onset, alongside `utime`, the original continuous-recording time in seconds, kept for traceability back to the raw file.
+4. Each epoch is baseline-corrected: for every channel, the mean voltage in the pre-stimulus period (`time <= 0`) is subtracted from every timepoint in that trial.
+
+With `test=True` (as used in `scripts/preprocess_eeg.py`), this step also runs a set of internal consistency checks after epoching and again after baseline correction: that indexing back into the continuous recording via `uindex` reproduces the epoch data exactly, that the local and continuous time axes are perfectly correlated and offset by a constant within each trial, that the stated stimulus-onset time matches the trigger tic recorded in step 7, that baseline-corrected epochs have (numerically) zero mean in the pre-stimulus window, and that baseline correction has not changed the *shape* of any epoch, only its offset, by checking uncorrected and corrected values remain perfectly correlated within each trial. These are all `assert`-based; a failure here stops the pipeline for that file rather than producing silently invalid output.
+
+## 9. Bad channel and bad epoch handling (AutoReject)
+
+`EEG.fix_bad_channels`, called when `--fix-bad yes` (the pipeline's default, set in the Snakefile), takes the baseline-corrected epoch table, reshapes it into an MNE `EpochsArray`, and runs `autoreject.AutoReject` on it.
+AutoReject either interpolates a bad channel within a trial from its neighbours, where the trial is otherwise usable, or marks the entire trial as unusable, where too many channels are bad to safely repair.
+The result is written back into the epoch table two ways: repaired channel values are substituted in place for the affected trial and channel, and every trial is stamped with a `drop` column, `True` for trials AutoReject rejected outright, `False` otherwise.
+Rows are not physically removed at this stage; `drop == TRUE` rows are retained in the output, flagged rather than deleted, so the decision to exclude them is left to downstream analysis.
+Several assertions verify that every original trial ends up in exactly one of the kept or dropped sets, that the count and shape of the output matches the input once the `drop` column itself is set aside, and that AutoReject's own record of which trials it kept and dropped agrees with the flags written into the table.
+
+## 10. Combining participants
+
+`scripts/combine_preprocessed_eeg.py` reads every participant's per-file epoch table (one `.feather` file per raw `.bdf` file, written by the step above) and concatenates them into a single table, adding a `participant` column taken from the input filename (the `.bdf` basename, with `_epochs` stripped).
+
+## 11. Merging with behavioural data
+
+`scripts/process_behaviour_raw_data.R` (not detailed here; it is a separate track that parses the PsychoPy JSON logs into `data/main/combined_behaviour_data.csv`) and the combined EEG epoch table are brought together in `scripts/merge_eeg_behaviour_data.R`:
+
+1. One participant, `ThB_03_21_2024_12_10_57`, is dropped from the behavioural data before merging; per `logbook.md` (21 September, 2024), this file was a duplicate of `ThA` on the same date, and the corresponding EEG recording was incomplete and is excluded from the EEG data entirely, so it is excluded here to keep the two tracks aligned.
+2. Before merging, the pipeline checks that the trial-level record in the behavioural data (participant, block, trial, stimulus type, response) exactly matches the trial-level record implied by the EEG epoch data, row for row, once both are sorted the same way. This is the point at which a mismatch between the two independently-recorded event streams, EEG triggers versus PsychoPy's own log, would be caught.
+3. The behavioural data is left-joined to the EEG epoch data on participant, block, trial, stimulus type, and response, so that every EEG timepoint in every trial carries the full set of behavioural covariates for that trial (numerosity, ratio, reaction time, and so on).
+4. A second check confirms that collapsing the merged table back down to one row per trial and comparing it against the original behavioural table reproduces it exactly, i.e. that the join did not duplicate or drop any trials.
+5. The result is written with `arrow::write_parquet` to `data/main/merged_eeg_behaviour_data.parquet`.
+
+## 12. Output
+
+The final file has one row per EEG sample, per timepoint, per trial, per participant, joined against that trial's behavioural covariates.
+As of the most recent full pipeline run (`logbook.md`, 22 August 2026), it has 23,124,000 rows and 85 columns: identifying and behavioural columns, the 64 EEG channel voltages (`Fp1` through `O2`, in microvolts, since MNE's `to_data_frame` returns voltage in that unit), and the `drop` flag from AutoReject.
+
+## Notes on parameters actually used
+
+A few defaults defined in the code are overridden by the values the Snakefile actually passes, and it is the Snakefile's values that describe what was actually run:
+
+- The band-pass filter is 1-30 Hz (Snakefile), not the 1-40 Hz default written into `scripts/preprocess_eeg.py`'s argument parser.
+- Bad-channel/epoch fixing via AutoReject is always applied (`fix_bad = 'yes'` in the Snakefile); the `--fix-bad no` code path exists but is not exercised by the pipeline as currently configured.
+- Epoch window and lock point (-200 to 1000 ms, locked to stimulus onset, not response) and the ICA/ICLabel exclusion criterion (keep only components labelled `brain` or `other`) are fixed in the Python source itself, not exposed as Snakefile parameters, so changing either means editing `pyutils/eegutils.py` or `scripts/preprocess_eeg.py` directly.

@@ -1,3 +1,22 @@
+# 23 August, 2026; 23:11
+
+Added three background notes in `notes/`, written before starting the actual sanity checks on the merged EEG data, since I have no EEG background myself and needed the groundwork written down first.
+
+- `notes/electrode-labels.md`: plain-language explanation of the 64 channel labels (`Fp1`, `AFz`, and so on).
+Covers the difference between the physical connector labels (`A1`-`A32`, `B1`-`B32`) and the anatomical 10-20/10-10 labels actually used in the merged data, the naming convention (region letters front to back, odd/even/`z` for left/right/midline), and what the main regions (frontal, central, parietal, occipital, temporal) correspond to on the scalp.
+Confirmed the coordinates in `analysis/Cap_coords_all.xls` (sheet `64-chan`) and the renaming done in `pyutils/eegutils.py` both follow MNE's standard `biosemi64` montage, in the same channel order, so the mapping used in the code is a standard, off-the-shelf convention, not something bespoke to this study.
+- `notes/preprocessing-pipeline.qmd`: a Quarto methods-style writeup of the full pipeline, numbered step by step, from the raw BDF file through channel renaming, downsampling, ICA/ICLabel artefact removal, filtering, trigger decoding, trial extraction, epoching with baseline correction, AutoReject, participant concatenation, and the final merge with behavioural data.
+Reconstructed by reading the Snakefile, `scripts/preprocess_eeg.py`, `pyutils/eegutils.py`, `scripts/combine_preprocessed_eeg.py`, and `scripts/merge_eeg_behaviour_data.R`.
+Notes where the Snakefile's actual parameters (1-30 Hz filter, `fix_bad = yes`) differ from the Python script's own coded defaults, since it's the Snakefile's values that describe what was actually run.
+- `notes/sanity-checks.md`: what to check in the merged data before trusting it, and what it should look like if preprocessing was done correctly.
+Separates two distinct failure modes that need different checks: a code-level channel-labelling bug, which would corrupt every participant identically and is caught by a group-averaged topography check, versus a session-specific wiring error, which shows up as one participant looking anomalous relative to the rest.
+Gives concrete checks: amplitude scale, baseline-near-zero, average-reference-sums-to-zero, the expected frontal eye-blink signature, the expected posterior visual response in the first 100-250 ms post-stimulus, left-right symmetry, and per-channel variance screening.
+
+Next step, to be done tomorrow morning (24 August, 2026): actually run the sanity checks described in `notes/sanity-checks.md` against `data/main/merged_eeg_behaviour_data.parquet`.
+`analysis/check_erp_plots.R` (a hacky, interactive script, not part of the pipeline) already has a first pass at some of this, grand-average ERP traces per channel and a per-trial per-channel variance screen, and was modified again tonight.
+Not committed as part of this entry, still ropey, interactive scratch code.
+Not yet decided whether to keep extending that script tomorrow or start fresh; either is fine.
+
 # 22 August, 2026; 22:07
 
 Removed the host renv/venv bootstrap now that the container covers reproducibility.
