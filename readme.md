@@ -65,6 +65,12 @@ Later reopens reuse the build cache and are fast.
 
 If the first build fails with an error about `pasta` or `/dev/net/tun`, rootless Podman couldn't set up its usual isolated network namespace for the build; add `--network=host` to the build (in Positron's dev container settings, or by building the image once yourself with `podman build --network=host -t purple-interactive -f .devcontainer/Dockerfile .` before reopening).
 
+The container's active user is `root`, not a per-user account.
+Rootless Podman's default UID mapping sends container UID 0 straight to the host user's real UID, so files edited inside the container keep normal host ownership on the bind-mounted workspace; any other in-container UID gets shifted into a subordinate range instead, which is why running as `root` here is what makes editing files feel ordinary from the host side, not a security-relevant choice.
+
+If reopening in a container hangs, or repeatedly fails to start with the same error even after a Dockerfile or devcontainer.json change, Positron is likely retrying an already-created container rather than building fresh.
+Find and remove it (`podman ps -a`, then `podman rm -f <name>`) and reopen; with nothing left to reattach to, Positron is forced to create one from the current config.
+
 Once inside, both the R console and the Python console are the container's interpreters automatically, no per-language picker to fight with.
 `purputils` is installed automatically on first creation (`devtools::install_local("rutils")`, run via `postCreateCommand`); after editing anything under `rutils/R/`, rerun that command, or use `devtools::load_all("rutils")` for changes to take effect without a full reinstall each time.
 
