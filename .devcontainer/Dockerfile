@@ -10,6 +10,7 @@ RUN set -e && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
         gnupg \
+        locales \
         wget \
         git \
         curl \
@@ -48,7 +49,16 @@ RUN set -e && \
     apt-get update && \
     apt-get install -y --no-install-recommends r-base r-base-dev && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    # Positron forwards the client's LANG (en_US.UTF-8 here) into the R
+    # session, but that locale isn't compiled into a slim base image, so R
+    # falls back to C with a warning per category. Generate the locales
+    # actually in use and set en_US.UTF-8 as the container default.
+    sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' \
+           -e 's/# en_GB.UTF-8 UTF-8/en_GB.UTF-8 UTF-8/' /etc/locale.gen && \
+    locale-gen
+
+ENV LANG=en_US.UTF-8
 
 # Python packages for interactive ANS/EEG analysis work.
 RUN pip3 install --no-cache-dir --break-system-packages \
@@ -66,17 +76,20 @@ RUN pip3 install --no-cache-dir --break-system-packages \
 
 # R packages, same set as container/purple.def, plus devtools for
 # interactive package development (load_all/install_local on rutils/).
-RUN Rscript -e 'install.packages(c("tidyverse", "argparse", "arrow", "rjson", "fs", "lubridate", "devtools"), repos = "https://cloud.r-project.org")'
+# remotes is listed explicitly because devtools::install_local() delegates
+# to remotes::install_local(), but remotes is only a Suggests of devtools
+# (checked lazily via check_installed()), not a hard Imports dependency, so
+# plain devtools installation wouldn't pull it in.
+RUN Rscript -e 'install.packages(c("tidyverse", "argparse", "arrow", "rjson", "fs", "lubridate", "devtools", "remotes"), repos = "https://cloud.r-project.org")'
 
-# devtools::install_local() delegates to remotes::install_local(), but
-# remotes is only a Suggests of devtools (checked lazily at call time via
-# check_installed()), not a hard Imports dependency, so it isn't pulled in
-# above. Separate layer so this doesn't force a full tidyverse/arrow rebuild.
-RUN Rscript -e 'install.packages("remotes", repos = "https://cloud.r-project.org")'
-
-# Non-root user, matching the host UID so bind-mounted files stay editable
-# without permission friction (a devcontainer convention, not needed for
-# the batch pipeline image).
+# TODO: dead weight, remove. This was meant to give bind-mounted files
+# editable ownership without permission friction, matching the host UID,
+# but rootless Podman's default UID mapping doesn't work that way (see
+# devcontainer.json's remoteUser comment): only container UID 0 maps
+# straight to the host user, any other UID including this one shifts into
+# the subuid range instead. devcontainer.json now sets remoteUser to root,
+# so this user, its sudoers entry, and the site-library chown below are all
+# unused. Low priority, not broken, just clutter.
 RUN groupadd --gid ${USER_GID} ${USERNAME} && \
     useradd --uid ${USER_UID} --gid ${USER_GID} --create-home --shell /bin/bash ${USERNAME} && \
     echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \

@@ -3,6 +3,16 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "remoteUser": "dev",
+  // Rootless Podman's default mapping sends container UID 0 (root) straight
+  // to the host user's real UID, but shifts any other in-container UID,
+  // including dev at 1000, into the host's subuid range instead. So dev
+  // (created to numerically match the host UID, a Docker-style assumption)
+  // ends up unable to write the bind-mounted workspace, which root, mapped
+  // 1:1 to the host user, can. --userns=keep-id would let dev keep UID 1000
+  // properly, but without kernel idmapped-mount support here it forces
+  // Podman to copy the whole multi-GB image, 8+ minutes, and it then fails
+  // outright with an OCI remount-private permission error. Root avoids all
+  // of that.
+  "remoteUser": "root",
   "postCreateCommand": "Rscript -e 'devtools::install_local(\"rutils\")'"
 }
