@@ -82,6 +82,9 @@ RUN pip3 install --no-cache-dir --break-system-packages \
 # plain devtools installation wouldn't pull it in.
 RUN Rscript -e 'install.packages(c("tidyverse", "argparse", "arrow", "rjson", "fs", "lubridate", "devtools", "remotes"), repos = "https://cloud.r-project.org")'
 
+# To avoid a slow rebuild of the image every time we need a new package, we will put extra package installs here
+RUN Rscript -e 'install.packages("moments", repos = "https://cloud.r-project.org")'
+
 # TODO: dead weight, remove. This was meant to give bind-mounted files
 # editable ownership without permission friction, matching the host UID,
 # but rootless Podman's default UID mapping doesn't work that way (see

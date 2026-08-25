@@ -1,3 +1,20 @@
+# 25 August, 2026; 17:07
+
+Ran sanity checks on `data/main/merged_eeg_behaviour_data.parquet`, beyond what AutoReject already does during preprocessing.
+Per-subject, per-channel descriptive statistics (variance, MAD, skewness, kurtosis) showed that AutoReject's trial-level rejection was not catching everything, a small number of subjects and channels still contained implausible voltage excursions, into the hundreds of microvolts, concentrated in specific subject-channel combinations rather than spread evenly across the sample.
+Two subjects stood out in particular, one (s13) with spread elevated fairly uniformly across nearly all 64 channels, consistent with a session that was noisier throughout, the other (s23) with a close-to-normal spread but far fatter tails on about 50 of its 64 channels, consistent with more frequent moderate excursions rather than a few extreme ones.
+Neither was explained by AutoReject's own trial-drop rate, which was unremarkable for both.
+Waveform plots of every trial for every channel, across all 47 subjects, confirmed the pattern by eye: not every channel or every subject is affected, both isolated bad trials and whole-channel problems for one subject occur, and the affected electrodes recur non-randomly (central sites, the posterior/inferior edge of the montage, frontopolar sites) and are often physically clustered within a subject, more consistent with session-specific contact problems than with a channel-labelling bug.
+
+Decided AutoReject needed a second pass after it, at the level of individual channel-trial combinations rather than whole subjects or channels.
+For each subject, channel and trial, computed the "voltage IPR", the range containing the central 99% of that trial's amplitude, a robust measure of a single trial's spread.
+A channel on a trial is flagged if its IPR is more than 5 robust (MAD-based) standard deviations above that channel's own median IPR, computed per channel since channels genuinely differ in typical amplitude and a pooled threshold would just flag naturally wider channels rather than genuinely anomalous trials.
+The threshold of 5, rather than the conventional 3.5, was chosen because 3.5 removed close to 5% of all data with no visible benefit over 5 on the cases checked, and 8 was rejected on the assumption that the nonlinear regression's residual error model won't itself be robust to occasional extreme trials, worth confirming once that model is specified.
+
+The rule, and a `plot_subject()` function to verify what it does to any subject's waveforms with or without the threshold applied, are in `analysis/flag_anomalous_trials.R`, the definitive record of this piece of work in place of the exploratory scripts and plots that led to it.
+Not yet applied to the data.
+The next step is turning the flags into a cleaned dataset, setting specific (subject, block, trial, channel) cells to `NA` in a new version of the merged parquet file rather than dropping whole rows, expected to need care around memory given that a naive `pivot_longer` over the full merged table earlier in this exercise used over 90GB of RAM and crashed the machine.
+
 # 23 August, 2026; 23:11
 
 Added three background notes in `notes/`, written before starting the actual sanity checks on the merged EEG data, since I have no EEG background myself and needed the groundwork written down first.

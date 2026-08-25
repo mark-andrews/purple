@@ -46,6 +46,30 @@ So `FC3` is fronto-central, moderately left of the midline.
 `PO8` is parieto-occipital, further right of the midline than `PO4`.
 `Cz`, dead centre at the top of the head, is the point EEG systems conventionally use as the geometric reference for the whole layout, which is why it sits at inclination zero in the coordinate sheet.
 
+### A rough map of the 64 positions
+
+This is a text approximation of `analysis/cap_map.jpeg`, a top-down view of the head with the nose at the top, for looking up roughly where a label sits without opening the image.
+Left-right spacing within each row is scaled from the actual coordinates in `Cap_coords_all.xls`, so it is closer to the real layout than an evenly-spaced grid would be, but it is still a flattened approximation, not the diagram itself.
+For exact positions, use the JPEG or the coordinate sheet.
+
+```
+                                                  front / nose
+                                           Fp1         Fpz         Fp2
+                                AF7       AF3          AFz          AF4       AF8
+                        F7     F5      F3      F1      Fz      F2      F4      F6     F8
+                  FT7      FC5      FC3       FC1      FCz      FC2       FC4      FC6      FT8
+  left ear ->   T7        C5        C3       C1        Cz        C2       C4        C6        T8 <- right ear
+                  TP7      CP5      CP3       CP1      CPz      CP2       CP4      CP6      TP8
+                P9      P7     P5      P3      P1      Pz      P2      P4      P6     P8      P10
+                                PO7       PO3          POz          PO4       PO8
+                                           O1          Oz          O2
+                                                       Iz
+                                              back of head / inion
+```
+
+Odd numbers (left of centre) and even numbers (right of centre) mirror each other, as the naming convention above describes.
+`P9`, `P10`, and `Iz` sit lower on the head, towards the mastoid bone and the inion, than their row placement here suggests, since this is a top-down flattening and those three sit somewhat below the main scalp surface it is projecting.
+
 ## Regions in practical terms
 
 Roughly, and only roughly, since scalp position is not the same as the underlying cortex it sits above:
