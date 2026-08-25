@@ -11,9 +11,14 @@ For each subject, channel and trial, computed the "voltage IPR", the range conta
 A channel on a trial is flagged if its IPR is more than 5 robust (MAD-based) standard deviations above that channel's own median IPR, computed per channel since channels genuinely differ in typical amplitude and a pooled threshold would just flag naturally wider channels rather than genuinely anomalous trials.
 The threshold of 5, rather than the conventional 3.5, was chosen because 3.5 removed close to 5% of all data with no visible benefit over 5 on the cases checked, and 8 was rejected on the assumption that the nonlinear regression's residual error model won't itself be robust to occasional extreme trials, worth confirming once that model is specified.
 
-The rule, and a `plot_subject()` function to verify what it does to any subject's waveforms with or without the threshold applied, are in `analysis/flag_anomalous_trials.R`, the definitive record of this piece of work in place of the exploratory scripts and plots that led to it.
-Not yet applied to the data.
-The next step is turning the flags into a cleaned dataset, setting specific (subject, block, trial, channel) cells to `NA` in a new version of the merged parquet file rather than dropping whole rows, expected to need care around memory given that a naive `pivot_longer` over the full merged table earlier in this exercise used over 90GB of RAM and crashed the machine.
+The rule is now applied, not just computed: flagged cells are set to `NA` in place, rather than whole trials being dropped, so the masked data have exactly the same rows and columns as the input.
+A naive `pivot_longer` over the full merged table, to join the per-trial flags against the per-timepoint data, used over 90GB of RAM and crashed the machine, so the join instead goes the other way, the small per-trial flag table is pivoted to wide (one flag column per channel) and joined onto the merged data by subject, block and trial only, which adds columns rather than multiplying rows.
+Checked exhaustively, not by spot sample, that every flagged (subject, block, trial, channel) combination is `NA` in every timepoint and every unflagged one is `NA` in none, with no partial masking within a trial/channel.
+
+This, and the `plot_subject()` function to verify what the threshold does to any subject's waveforms with or without it applied, are in `scripts/mask_anomalous_trials.R`, the definitive record of this piece of work.
+Writes `data/main/merged_eeg_behaviour_data_masked.parquet`.
+Ran it as `Rscript scripts/mask_anomalous_trials.R` from the repository root and confirmed by MD5 checksum that it reproduces the masked parquet file exactly on a repeat run.
+Still needs to be wired into the Snakemake pipeline as its last step, not yet done, that's the next piece of work on this.
 
 # 23 August, 2026; 23:11
 
