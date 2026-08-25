@@ -26,6 +26,40 @@
 
 library(tidyverse)
 
+# ===== exploration step =====
+# This code is kept just to record that this step was done as a first step
+if (FALSE) {
+  # In this code, we are calculating various descriptive statistics of the
+  # voltages on each channel for each subject, in order to identify any anomalous
+  # subjects and/or channels.
+  # It shows that some channels in some subjects have extreme voltages.
+
+  channel_voltage_summary <- arrow::read_parquet(
+    'data/main/merged_eeg_behaviour_data.parquet'
+  ) |>
+    filter(!drop) |>
+    select(subject, Fp1:O2) |>
+    pivot_longer(
+      cols = -subject,
+      names_to = 'channel',
+      values_to = 'mu_volts'
+    ) |>
+    summarise(
+      .by = c(subject, channel),
+      mean = mean(mu_volts),
+      median = median(mu_volts),
+      var = var(mu_volts),
+      mad = mad(mu_volts),
+      max = max(mu_volts),
+      min = min(mu_volts),
+      iqr = IQR(mu_volts),
+      skewness = moments::skewness(mu_volts),
+      kurtosis = moments::kurtosis(mu_volts)
+    )
+}
+
+# ============================
+
 ipr <- function(x, p = 0.99) {
   # calculate range
   # within which lie proportion p of the
