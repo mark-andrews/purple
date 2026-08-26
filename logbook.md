@@ -1,3 +1,27 @@
+# 26 August, 2026; 14:08
+
+To do, not done today: check whether a handful of subjects show a genuine late-epoch drift at the posterior midline channels, rather than ordinary between-subject variability, before trusting the multilevel model's subject-level random effects to absorb it.
+
+The concern: while looking at grand-average and per-subject ERPs at `POz`, `Oz` and `Pz` (`analysis/aug26_1.R`, figures x4 and x5), several subjects' average waveforms stay well away from zero in the 500-1000ms window, well after the grand average has settled back near baseline.
+The existing trial-level mask (`scripts/mask_anomalous_trials.R`, see 25 August entry) cannot catch this even in principle: it flags a trial by its IPR, the spread of voltage within that one trial around its own mean, which says nothing about where that mean sits.
+A trial that drifts smoothly away from zero, for instance from a slow skin-potential shift or a change in electrode impedance over the session, keeps a normal-looking spread around its own drifted level and is never flagged.
+If that drift is consistent in direction across a subject's trials, rather than random trial to trial, it survives averaging over ~200 trials and shows up as exactly this kind of late-epoch offset in the subject mean.
+A second, unrelated possibility for the same symptom is a small effective sample size, a subject-channel combination with many trials already masked out has a noisier late-epoch average for that reason alone, no drift required.
+
+Wrote `analysis/check_subject_channel_drift.R` to check this.
+For each subject and channel, it computes the subject-average ERP's peak absolute amplitude in the 500-1000ms window, alongside the number of trials that average was built from, and flags outliers using the same per-channel MAD-based z-score convention as `mask_anomalous_trials.R` (z >= 5).
+Only the channels actually being checked are pivoted to long format before summarising, not all 64, since a naive `pivot_longer` over the full unfiltered table is the same mistake that used over 90GB of RAM and crashed the machine on 25 August, and this script hit that exact crash on first attempt before being restricted to a handful of channels.
+It has to be run inside the Podman devcontainer (or equivalent), not on the host, since the host has no `arrow` installation.
+
+First pass, on `POz`, `Oz`, `Pz`: nothing reaches the z >= 5 bar used for trial-level masking, so nothing here is anomalous by that existing standard.
+Below that bar, four subjects (s34, s19, s38, and to a lesser extent s17) show a moderate, consistent elevation (z roughly 2 to 4.5) across all three channels simultaneously, which is more suggestive of a session-wide issue for those subjects than three unrelated coincidences would be.
+Checked this isn't just explained by low trial counts: those four subjects have 179-200 surviving trials each, right at the healthy end, while the subjects with genuinely low counts (s18, s6: 67-68 trials; s27: 55 at `Oz`; s31: 93) are a different set and are not the ones showing elevated late-epoch amplitude.
+Also checked this isn't just re-finding the two subjects (s13, s23) already flagged as broadly noisy on 25 August: s13 is only moderately elevated here (z = 2.16 at `POz`) and s23 barely registers, so this is catching something different from the earlier trial-level screen, not the same problem twice.
+Four subject-channel combinations (s4-Pz, s10-POz, s13-Pz, s23-Oz) are fully masked, every trial flagged, consistent with an ordinary single bad electrode contact for that subject rather than a session-wide problem, since each subject's other channels checked here are fine; not itself a concern.
+
+What still needs doing, later: eyeball s34, s19 and s38 specifically, using `plot_subject()` from `mask_anomalous_trials.R` or `plot_channel_subject_grid()` from `aug26_1.R`, to judge by eye whether the late-epoch elevation looks like genuine drift or artifact worth masking or excluding, or is simply what a more electrically active individual's ERP looks like.
+Not blocking the modelling work meanwhile, since nothing here clears the threshold already used to justify masking, but better resolved by eye now than discovered as an unexplained subject-level outlier in a posterior predictive check later.
+
 # 25 August, 2026; 17:07
 
 Ran sanity checks on `data/main/merged_eeg_behaviour_data.parquet`, beyond what AutoReject already does during preprocessing.
