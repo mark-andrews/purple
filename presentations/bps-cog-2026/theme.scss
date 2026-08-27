@@ -1,0 +1,121 @@
+/*-- scss:defaults --*/
+
+/*-- scss:rules --*/
+
+/* Google Fonts — same set as the website */
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Inconsolata:wght@200..900&family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* Base */
+.reveal {
+  font-family: "EB Garamond", serif;
+  font-size: 34px;
+  color: #000;
+  background-color: #fff;
+}
+
+/* Headings */
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4 {
+  font-family: "EB Garamond", serif;
+  font-style: italic;
+  font-weight: 400;
+  text-transform: none;
+  text-shadow: none;
+  color: #000;
+  line-height: 1.2;
+  margin-bottom: 0.4em;
+}
+
+/* Title slide */
+.reveal .title {
+  font-size: 1.8em;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.reveal .subtitle {
+  font-style: italic;
+  font-size: 1.1em;
+  color: #BE0000;
+  font-weight: 400;
+}
+
+.reveal .author {
+  font-family: "Work Sans", sans-serif;
+  font-style: normal;
+  font-size: 0.65em;
+  font-weight: 400;
+  color: #333;
+  margin-top: 1em;
+}
+
+/* Body text and lists */
+.reveal p,
+.reveal li {
+  font-family: "EB Garamond", serif;
+  line-height: 1.5;
+}
+
+.reveal ul,
+.reveal ol {
+  font-family: "EB Garamond", serif;
+}
+
+/* Links */
+.reveal a,
+.reveal a:visited {
+  color: #BE0000;
+  text-decoration: none;
+}
+
+.reveal a:hover {
+  color: #BE0000;
+  text-decoration: underline;
+}
+
+/* Inline code */
+.reveal code {
+  font-family: "Inconsolata", monospace;
+  font-size: 0.82em;
+  color: #222;
+  background: transparent;
+  padding: 0;
+}
+
+/* Code blocks */
+.reveal pre {
+  font-family: "Inconsolata", monospace;
+  box-shadow: none;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  width: 100%;
+}
+
+.reveal pre code {
+  font-family: "Inconsolata", monospace;
+  font-size: 0.72em;
+  line-height: 1.45;
+  max-height: 480px;
+  color: #000;
+  background: transparent;
+}
+
+/* Progress bar */
+.reveal .progress {
+  color: #BE0000;
+}
+
+/* Slide number */
+.reveal .slide-number {
+  font-family: "Work Sans", sans-serif;
+  font-size: 0.55em;
+  color: #aaa;
+  background: transparent;
+}
+
+/* Horizontal rules between sections */
+.reveal hr {
+  border-color: #ddd;
+}
