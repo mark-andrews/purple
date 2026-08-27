@@ -1,9 +1,9 @@
 ---
 title: "Identifying the Neural Signature of the Approximate Number System via Multilevel Nonlinear Regression of Single-Trial EEG"
 author:
-  - name: Dr Jessica Ann Diaz
+  - name: Jessica Ann Diaz
     affiliation: Birmingham City University
-  - name: Dr Mark Andrews
+  - name: Mark Andrews
     affiliation: Nottingham Trent University
 bibliography: references.bib
 format:
