@@ -123,6 +123,18 @@ each $\tau \sim \text{Half-}t(3,0,2)$ and each $z \sim \mathcal{N}(0,1)$, indepe
 
 In the notation of the varying-slopes-varying-intercepts analogy used to motivate this family, $w^{(0)}$ plays the role of the fixed-effect coefficients, $\gamma^{\text{num}}$ and $\gamma^{\text{rat}}$ the role of the fixed-effect covariate slopes, and $b^{\text{subj}}$, $b^{\text{elec}}$, $b^{\text{trial}}$ the role of the crossed random effects, all generalised from single numbers to $K$-vectors indexing an entire basis-function expansion rather than a single slope or intercept.
 
+## M1+M3: subject and trial, single electrode
+
+Not part of the M0-M7 ladder above, which treats electrode as a crossed grouping factor from M2 onward.
+This variant instead fits one electrode at a time, so there is no electrode index and no electrode deviation at all; $e(n)$ is not used, and $N$, $S$, $R$ are specific to whichever single electrode's data was passed in.
+Structurally it is M1 and M3 combined, additively, with no stimulus covariates.
+Used for the first preliminary fits, at `POz`, `Oz`, and `Pz`, ahead of the 27 August 2026 conference presentation (see logbook).
+$$
+w_k(n) = w_k^{(0)} + b^{\text{subj}}_{k,\,s(n)} + b^{\text{trial}}_{k,\,r(n)}, \qquad w_k^{(0)} \sim \mathcal{N}(0, 5),
+$$
+with $b^{\text{subj}}$ and $b^{\text{trial}}$ defined exactly as above, independently of each other.
+Corresponds to `m1_3_subject_trial_single_electrode.stan`.
+
 ## What is deliberately left out
 
 No spatial covariance between electrodes is modelled anywhere in this ladder.

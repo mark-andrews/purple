@@ -32,3 +32,14 @@ Density is not included as a covariate, since nothing in this repository current
 
 None of these have been fit yet.
 The non-centered parameterization (`tau * z` rather than a direct hierarchical prior) is used throughout in anticipation of needing it for sampling efficiency once real data is used, but no timing or feasibility claims should be read into that choice yet.
+
+## Single-electrode variant
+
+`m1_3_subject_trial_single_electrode.stan` sits outside the ladder above.
+The ladder treats electrode as a crossed grouping factor from M2 onward, but the first preliminary fits, for the 27 August conference presentation, are done one electrode at a time instead: `POz`, `Oz`, and `Pz`, fit separately.
+Structurally it is M1 and M3 combined, subject and trial as crossed random effects, no electrode term, no stimulus covariates.
+Documented in `model_specification.qmd` alongside the numbered models.
+
+`smoke_test_lmer.R` fits the same subject+trial structure in `lme4`, as a quick check that the modelling approach and data prep are sound before committing to Stan.
+A fixed-basis regression is linear in its weights, so with centers and width fixed it's ordinary linear regression on the basis-function values, and the multilevel version is an ordinary mixed model with those values as random-slope terms, `(b1 + ... + bK || subject)`.
+No Stan model has been fit yet; this is the step before that.

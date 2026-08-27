@@ -1,3 +1,122 @@
+# 27 August, 2026; 00:18
+
+Started adding EEG results to today's BPS conference talk (`presentations/bps-cog-2026`), grand-average ERPs across a representative subset of electrodes, not all 64: anterior (AF3, AFz, AF4), central (C3, Cz, C4), and parieto-occipital (PO7, POz, PO8, P7, Pz, P8), following the same collapse-over-subject-and-trial approach as `analysis/aug26_1.R`'s Figure x.3 (fixed y-scale, per-channel facet).
+Central included specifically because it's expected to show little, the sensorimotor strip rather than a visual-response site; anterior included because it's expected to broadly mirror the posterior sites; posterior is where P1/N1/P2p actually live.
+
+The slide deck cannot read the merged EEG parquet directly, at several gigabytes it's far too slow to re-read on every Quarto render, and Quarto's own chunk caching was deliberately ruled out as more trouble than it's worth here.
+So the presentation instead reads a small precomputed file, `tmp/grand_average_erp.rds`, grand-average voltage per channel per timepoint, all 64 channels, dots task only, written once by a new standalone script, `analysis/prepare_presentation_data.R`, run by hand inside the devcontainer.
+That file is not committed and not durable, `tmp/` is gitignored and gets cleared; if it's missing, re-run `analysis/prepare_presentation_data.R` (needs `arrow`, devcontainer only) to regenerate it, a few seconds' work once the parquet is read.
+This is a deliberate, acknowledged shortcut for getting today's talk finished, not a long-term data-management decision: the repository already has real clutter building up (`smoke_test_lmer.R` deleted earlier tonight for exactly this reason) and putting more thought into how presentation-derived data should be prepared and stored is follow-up work, not something to solve mid-talk-prep.
+The `M0`/`M1`/`M2` `.rds` files saved earlier tonight to `tmp/` (see above) are the same kind of thing, ephemeral, session-local, and will need the same eventual tidying-up.
+
+Ran a step-by-step sequence of `lme4` smoke tests, `analysis/multilevel_rbf/smoke_test_lmer0.R`, `smoke_test_lmer1.R`, `smoke_test_lmer2.R`, at POz, to validate the basis-function multilevel model's structure and data preparation cheaply before committing to Stan.
+Total model-fitting time across all three, start to finish, was under two hours.
+None of the three results are polished, but all three are informative, which is the actual point of a smoke test.
+
+**M0** (`smoke_test_lmer0.R`): subject variability only, all subjects, trials pre-averaged away first.
+The cheapest possible version of this model, meant to check subject-level random effects in isolation before adding anything else.
+Its first attempt, still inside the old combined draft at the time, tried this on a small 8-subject subset for speed and failed with a degenerate Hessian, a genuine optimizer failure, not just a warning: 8 subjects is too few groups to estimate 9 independent variance components (8 basis-function slopes plus an intercept).
+Fixed by using all 47 subjects instead, which costs nothing once trials are pre-averaged, so there was never a real reason to subset subjects here.
+With only the original 8 coarse basis functions (spanning the whole ~1200ms epoch, each about 170ms wide), the population fit visibly underfit, flattening the main peak's amplitude and missing the sharp early P1-like structure entirely, since nothing that coarse can represent a ~50-100ms component.
+Fixed by adding a second, denser tier of 8 basis functions confined to 0-300ms, where P1, N1, and P2p all sit, on top of the original 8, not instead of them, giving 16 basis functions total.
+Re-run with all 47 subjects and 16 basis functions: 240 seconds, converged cleanly, and the population fit now tracked the grand average closely across the whole epoch.
+Subject-level fits showed real, substantial between-subject variability, peak amplitudes from near zero to over 20µV across subjects, without obvious overfitting.
+
+**M1** (`smoke_test_lmer1.R`): trial variability only, one subject (chosen at random, came out as s47), full trial-level resolution, no averaging.
+The next cheapest test, trial-level random effects instead of subject-level, still avoiding the cost of combining both.
+First run, same 16 basis functions used for the random effect as for the fixed effect: 745 seconds, and severe single-trial overfitting, individual trial fits visibly tracking what looks like single-trial noise rather than genuine signal, worst in the 8 dense, narrow 0-300ms basis functions, exactly the ones capable of representing that kind of fine structure.
+Fixed by restricting the trial random effect to the 8 coarse basis functions only, leaving the fixed effect at all 16: the first case in this sequence of the fixed-effect and random-effect design matrices deliberately not matching.
+Re-run: converged, visibly less jagged trial-level fits, confirmed by a direct before/after comparison on the same 12 sampled trials, not just a different random draw looking better by chance.
+A follow-up check of whether the remaining trial-level roughness related to how many trials a subject had, as a proxy for a noisier average, found no relationship (Spearman's rho about 0.03), but the check itself was flawed, the roughness metric used was confounded with response amplitude rather than a valid test of the hypothesis, so this specific question remains genuinely open, not resolved either way.
+
+**M2** (`smoke_test_lmer2.R`): subject and trial together, both random effects at once, the actual target structure this whole sequence was building toward.
+The full dataset (47 subjects x ~180 trials x ~1230 timepoints, on the order of 10 million rows) was never attempted, far too slow for two crossed random effects.
+First attempt cut both subjects (to 15) and trials (to 20 per subject) for speed, with the subject random effect reduced to a 4-term basis, and failed the same way M0's first attempt did, a degenerate Hessian, 15 subjects too few for 5 variance components.
+Second attempt cut the subject basis further to 2 terms; converged without a warning this time, but produced numerically unstable nonsense, near-straight-line "fits" per subject reaching into the tens or hundreds of microvolts.
+Cause: with only 2 centers, `seq()` places them at the two ends of the epoch, and the width convention used throughout this basis (width = spacing) then forces the width to the entire ~1200ms range, making the two basis functions nearly collinear, so the model can't separate their two weights and amplifies noise into large, arbitrary trends instead.
+Third attempt reduced the subject random effect all the way to a plain random intercept, no basis-function slopes at all; converged cleanly and confirmed a subject-level effect is estimable at 15 subjects, but produced, correctly, uselessly rigid fits, an intercept can only shift the shared curve up or down, never reshape it, so every subject's "fit" was just the population curve translated vertically.
+That's not a bad result, it's exactly what an intercept alone can ever produce, and it settled the point that 15 subjects was survivable in principle, just not with any real subject-level shape flexibility.
+Diagnosis at that point: subject count was the wrong dimension to have cut in the first place.
+M0 had already shown 47 subjects comfortably supports an 8-term coarse subject-level random effect; trial count is the safe dimension to cut instead, since the number of trial groups, subjects times trials-per-subject, stays large regardless of how many trials per subject are kept.
+Final version: all 47 subjects, 20 trials per subject (about 1.4 million rows), both random effects at the same 8-term coarse basis already validated separately in M0 and M1, nothing reduced to an intercept.
+Took 71 minutes (4272 seconds wall clock, timed with `system.time()`), by a wide margin the slowest fit this session.
+Result: by far the best population-level fit of the whole session, closely tracking the grand average across the full epoch, including the sharp early structure and the main P2p-like peak.
+Subject-level fits were sensible, broad shape captured per subject, sharp idiosyncratic spikes appropriately smoothed over given the coarse-only basis, no sign of subject-level overfitting.
+Trial-level fits still show substantial, possibly excessive spread, particularly right at the two edges of the time window, before stimulus onset and at the end of the epoch, which looks like it could be a basis-function boundary artefact, the least-constrained coefficients sit at the edge of the fitted range, rather than a genuine finding about trial-to-trial neural variability.
+Not resolved; flagged for whenever this specific question is worth returning to.
+All three fitted model objects, `M0`, `M1`, `M2`, are now saved via `saveRDS()` to `tmp/smoke_test_lmer{0,1,2}_{M0,M1,M2}.rds` at the end of their respective scripts, so none needs refitting to look at again this session; `tmp/` only, not a durable save, and `M0`/`M1` need re-running once to actually produce their `.rds` files since the save lines were added after those two had already been run.
+
+Decision: `lme4` has done its job for this exploratory pass, cheap enough to iterate on, and every failure mode hit along the way, the degenerate Hessian, the collinear basis, the forced choice between a rigid intercept and cutting flexibility, traces back to the same cause, REML is a point-estimation method with no way to gracefully shrink a weakly-identified variance component toward zero the way a prior can.
+Moving to Stan for further work on this, not `brms`, hand-written models via `cmdstanr`, so the exact basis-function random-effects structure stays fully under control rather than going through `brms`'s formula-to-Stan translation.
+Plan, in order: first re-implement these exact same models, M0, M1, M2's structure, directly in Stan, one at a time, in the same order, to get a like-for-like comparison against what `lme4` already gave before adding any new complexity.
+Given `lme4` alone already took 71 minutes for M2, and Stan will likely be slower still for a comparable model under full HMC sampling, start with fast approximate inference instead, optimization (MAP), Laplace approximation, Pathfinder, ADVI, all supported by `cmdstanr`, rather than full sampling, to iterate quickly, and move to HMC only once a model is settled enough to be worth the wait.
+After matching the `lme4` baseline, build up complexity slowly and deliberately, one change at a time, checking results before moving to the next, specifically to address the underfitting/overfitting tension this session's diagnostics kept surfacing, rather than reproducing it in a more expensive tool.
+Keep logging each step here as it happens, the way this session's `lme4` work was.
+Some of this work will also be referenced in today's BPS Cognitive Section conference talk; see `presentations/bps-cog-2026`.
+
+# 26 August, 2026; 15:00
+
+Starting the first preliminary multilevel nonlinear model fits, for the conference presentation.
+This entry will be updated through the rest of today as that work proceeds.
+
+Scope, deliberately narrowed: subject and trial as crossed random effects, no electrode grouping and no spatial model over the scalp.
+Electrodes are not exchangeable the way subjects and trials are, they sit at fixed points with a real geometry, and a plain unstructured random intercept per electrode would throw that away.
+Handling that properly (a generalised additive model over the scalp coordinates in `analysis/Cap_coords_all.xls`) is real, separate work for another day, already flagged as a known gap in `analysis/multilevel_rbf/model_specification.qmd`'s "What is deliberately left out" section, not something to fold into this pass.
+Instead, fitting one electrode at a time.
+
+Electrodes for this pass: `POz` and `Oz` at minimum, adding `Pz` for a fuller check.
+All three are midline (the `z` suffix means zero distance left or right of centre), not "central" in the anatomical sense, `C` is a separate, different electrode row (the vertex/sensorimotor strip) that has already shown up flat and uninformative for this task in the 25 August grand-average work.
+`POz` is midline parieto-occipital, `Oz` midline occipital, `Pz` midline parietal.
+Chosen because this is where the literature on numerosity ERPs consistently locates the relevant components, and because it's also where this project's own grand-average ERPs (`analysis/aug26_1.R`, figures x2/x3) show the largest, cleanest responses of any of the 64 channels.
+
+Wrote `analysis/multilevel_rbf/m1_3_subject_trial_single_electrode.stan` for this pass.
+None of the M0-M7 ladder models fit, since that ladder treats electrode as a crossed grouping factor from M2 onward and this pass fits one electrode at a time instead.
+Structurally the new model is M1 (subject) and M3 (trial) combined, additively, no electrode term, no stimulus covariates.
+Documented in the ladder's `readme.md` and `model_specification.qmd` alongside the numbered models, so the spec still matches the code exactly for every model in the directory, not just the numbered ones.
+
+Before fitting that in Stan, wrote `analysis/multilevel_rbf/smoke_test_lmer.R`, the same subject+trial structure fit in `lme4` instead, as a faster check that the model structure and data prep are sound.
+With RBF centers and width fixed rather than estimated, the basis-function expansion is linear in its weights, so this is literally a linear mixed model, fixed-effect and uncorrelated random-slope terms on the K basis-function values, `(b1 + ... + bK || subject)`, the same trick as the spline example in `gam_script2.R`.
+Used `||`, uncorrelated random slopes, rather than `|`, because the target Stan model gives each basis function an independent variance with no covariance between basis dimensions, so `||` is the closer analog and also much likelier to converge with two crossed grouping factors than a full covariance matrix would be.
+Dry-ran the formula-construction and model-fitting logic on synthetic data (not this project's real data, the host has no `arrow`) to confirm the crossed `(... || subject) + (... || trial_id)` specification is valid and fits without error: `nloptwrap` converged, code 0.
+`smoke_test_lmer.R` itself not yet run against the real merged data, that needs the devcontainer.
+
+Restructured into a step-by-step sequence of separate scripts, since the combined draft above was jumping between the full model and its two decompositions out of order.
+`analysis/multilevel_rbf/smoke_test_lmer0.R` is the first: subject variability only, subject-averaged data, exactly the M1_3_0 model above, plus diagnostic plots (population fit vs grand average, all-subjects overlay, per-subject facets).
+Ran cleanly against the real data on all subjects, no convergence warnings, confirming the earlier diagnosis that the degenerate Hessian was a too-few-groups problem, not a general `lme4` fragility.
+
+The diagnostic plots showed real underfitting, not a false alarm.
+The population fit and the per-subject fits both smooth straight through the early P1/N1 structure and flatten peak amplitude throughout, an expected consequence of 8 Gaussian basis functions spaced evenly across the whole -200 to 1000ms epoch, each about 170ms wide, far too coarse for components living in a roughly 80-250ms window.
+Between-subject variability itself came through clearly, several subjects' fitted curves peak past 15µV and others stay near zero, so the random-effect structure is doing its job; the resolution problem is specifically in the shared basis, not the multilevel part.
+
+Fixed by adding, not replacing: the original 8 coarse centers spanning the full epoch stay, and a second set of 8 narrower centers, confined to 0-300ms (spacing and width both about 43ms, versus 171ms for the coarse set), is added alongside them, 16 basis functions total.
+Centers and widths remain fixed, not estimated, in both sets, so this is still ordinary linear regression on a richer set of fixed predictors, not a step toward overfitting via adaptive basis placement.
+Not run against the real data yet with the new basis; that's the next thing to check.
+
+Three components are the target, all standard in the numerosity-ERP literature specifically, not general ERP nomenclature:
+
+- P1, ~80-150 ms, posterior positivity.
+Tracks the physical stimulus rather than the perceived one.
+Grasso et al. (2022; see below) found P1 amplitude modulated by real differences in dot count between conditions, but unaffected by a numerosity-adaptation illusion that changed what participants perceived without changing the physical stimulus, "suggesting that this variation was mostly unrelated to changes in perceived numerical estimates" (p. 7).
+
+- N1, ~150-200 ms, posterior, a negative-going deflection or inflection between P1 and P2p.
+Two things are known about it, and they point the same way.
+Hyde and Spelke (2009, see below) found N1 amplitude modulated by absolute number specifically for small arrays (1-3 items), not large ones, and interpreted this as reflecting "a location-specific and attentional-dependent processing... crucial for the elaboration of very low numerical ranges", i.e. tracking individual objects and their locations (an object-tracking/individuation system) rather than an abstract sense of quantity.
+Separately, in Grasso et al.'s own data, where every stimulus was already above the subitizing range (22-41 dots), N1 was still modulated by physical numerosity differences, but, like P1 and unlike P2p, was not modulated by the perceptual illusion: N1 waveforms for Baseline, Adaptation and Neutral conditions "were virtually overlapped" (p. 7).
+So N1 looks like an earlier, more stimulus-driven stage of processing than P2p, tied to attending to and individuating the array itself, not (on the evidence so far) to the subjective numerical estimate.
+
+- P2p, ~200-250 ms, posterior/parietal, "P2, parietal" to distinguish it from the unrelated centro-frontal P2/P200 component.
+This is the component treated as the actual candidate signature of ANS processing, specifically because it is the one shown to track the perceived rather than the physical numerosity.
+Grasso et al.'s central result is that P2p shrank under the same adaptation illusion that left P1 and N1 unchanged, and that the size of that shrinkage correlated with each participant's behavioural underestimation (Spearman r(23) = 0.43, p = 0.03).
+More generally, mid-latency components like P2p are described in this literature as indexing "abstract, location-invariant numerical information", a genuine representation of quantity rather than a response to a particular low-level visual feature, and one "mostly evident within relatively large numerical ranges" (Grasso et al., 2022, p. 9), i.e. the regime this project's own ANS task uses throughout, unlike the small-number range where N1's distinct role was established.
+
+Papers behind the above, given in full since author-year alone is easy to lose track of later:
+
+- Grasso, P. A., Petrizzo, I., Caponi, C., Anobile, G., & Arrighi, R. (2022). Visual P2p component responds to perceived numerosity. Frontiers in Human Neuroscience, 16:1014703. The paper worked through in detail today; source of the P1/N1/P2p functional contrast above and the electrode cluster (P3, P4, P7, P8, PO3, PO4, PO7, PO8, O1, O2) this project's choice of `POz`/`Oz`/`Pz` is consistent with.
+- Hyde, D. C., & Spelke, E. S. (2009). All numbers are not equal: An electrophysiological investigation of small and large number representations. Journal of Cognitive Neuroscience, 21(6), 1039-1053. Source of the N1 (small-number) versus P2p (large-number, ratio-sensitive) dissociation, and, along with Libertus et al. (2007) below, one of the papers credited with establishing P2p as a named component in this literature.
+- Libertus, M. E., Woldorff, M. G., & Brannon, E. M. (2007). Electrophysiological evidence for notation independence in numerical processing. Behavioral and Brain Functions, 3:1. Earliest of these to report P2p modulated by numerical distance over relatively large numerical ranges.
+- Park, J., DeWind, N. K., Woldorff, M. G., & Brannon, E. M. (2016). Rapid and direct encoding of numerosity in the visual stream. Cerebral Cortex, 26(2), 748-763. Reports an even earlier (~75 ms) component, in addition to P2p, that scales with dot count.
+- Fornaciai, M., & Park, J. (2017). Distinct neural signatures for very small and very large numerosities. Frontiers in Human Neuroscience, 11:21. Further evidence for the subitizing-range/large-range distinction underlying the N1/P2p functional split.
+
 # 26 August, 2026; 14:08
 
 To do, not done today: check whether a handful of subjects show a genuine late-epoch drift at the posterior midline channels, rather than ordinary between-subject variability, before trusting the multilevel model's subject-level random effects to absorb it.

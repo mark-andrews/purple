@@ -82,8 +82,15 @@ RUN pip3 install --no-cache-dir --break-system-packages \
 # plain devtools installation wouldn't pull it in.
 RUN Rscript -e 'install.packages(c("tidyverse", "argparse", "arrow", "rjson", "fs", "lubridate", "devtools", "remotes"), repos = "https://cloud.r-project.org")'
 
+RUN set -e && \
+    export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends libnlopt-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # To avoid a slow rebuild of the image every time we need a new package, we will put extra package installs here
-RUN Rscript -e 'install.packages("moments", repos = "https://cloud.r-project.org")'
+RUN Rscript -e 'install.packages(c("moments", "lme4", "lmerTest", "mgcv"), repos = "https://cloud.r-project.org")'
 
 # TODO: dead weight, remove. This was meant to give bind-mounted files
 # editable ownership without permission friction, matching the host UID,
