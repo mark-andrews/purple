@@ -1,0 +1,430 @@
+---
+title: "Technical Appendix"
+subtitle: "Supporting detail for the B0-B3 ladder"
+author: "Mark Andrews"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    theme: cosmo
+  pdf:
+    toc: true
+    number-sections: true
+---
+
+Nothing here is needed to run the models. It is the material that would
+have cluttered `models.qmd`, together with the constructions that are
+deliberately not being used yet but that will be wanted later.
+
+# Decimation
+
+## The sufficiency argument
+
+All models are fitted at 128 Hz, every eighth sample of the 1024 Hz
+recording, giving $T = 154$ per epoch rather than 1229.
+
+The argument usually offered for this is about information: the Fisher
+information for the weights, $B^\top \Sigma^{-1} B$, approaches a finite
+limit as the sampling rate exceeds the bandwidth, so sampling faster adds
+numbers rather than evidence. That is true but it is asymptotic and invites
+the question of how close 128 Hz is to the limit.
+
+The exact version is stronger. The band-pass filter at 1 to 30 Hz was
+applied to the whole record, not to the signal only, so the noise is
+band-limited too. A band-limited record sampled above twice its bandwidth
+determines the continuous record exactly, by sinc interpolation. The
+1024 Hz samples are therefore a deterministic, invertible function of the
+128 Hz samples, and the decimated data are a sufficient statistic for
+anything in this model. No likelihood can extract from them information
+that is not in the reduced set.
+
+This also means the usual empirical check, decimate then interpolate back
+and measure the error, is measuring the interpolator, not information
+loss. Cubic spline interpolation is not sinc interpolation. On one trial
+the reconstruction error at 128 Hz comes out at 0.85% of the signal
+standard deviation, and at 64 Hz it breaks down at 16.7%, but 64 Hz is
+still above twice the 30 Hz cutoff, so there is essentially nothing to
+lose there either and almost all of that 16.7% is the interpolator. The
+check is worth running as an arithmetic sanity test. It should not be what
+decides the rate.
+
+## Why it is necessary, not merely permitted
+
+At 1024 Hz, fitting a low-order AR noise model degenerates. On one trial,
+the estimated innovation standard deviation falls to about 0.001 µV at
+$p = 8$ and the AR(2) roots crowd onto the unit circle at
+$\varphi = (1.986, -0.993)$. Model comparison across orders becomes
+meaningless and the resulting standard errors are not credible.
+
+This is not numerical bad luck. It follows from the same band-limiting.
+
+A stationary process has strictly positive one-step prediction error
+variance if and only if $\int \log S(\omega)\,\mathrm{d}\omega > -\infty$,
+the Szegő condition. A band-limited process has $S(\omega) = 0$ on an
+interval, so the integral diverges and the one-step prediction error
+variance is exactly zero. In Wold's terms the process is deterministic. An
+AR($p$) process has a strictly positive rational spectral density and is
+purely non-deterministic by construction, so it cannot represent this.
+Maximum likelihood responds by pushing roots towards the unit circle to
+force the fitted spectrum towards zero, dragging the innovation variance
+with them. The behaviour observed is what the estimator must do.
+
+Two consequences.
+
+Decimation to 128 Hz reduces the problem but does not remove it. The
+spectrum is still zero over 30 to 64 Hz, more than half the retained band,
+so the Szegő violation persists. This predicts exactly what is observed at
+128 Hz, which is that AIC continues to improve monotonically to $p = 8$
+with no sign of levelling off, and Ljung-Box rejects whiteness at every
+order tried.
+
+AR($p$) should therefore be framed as a working approximation adopted to
+get calibrated uncertainty on the fitted curve, not as a correct
+description of a band-limited process. The stability criterion, whether
+the reported quantity moves across AR order, is doing all the real work,
+and it should be said that this is by necessity rather than preference.
+
+There are two mechanisms that could produce the monotone AIC improvement,
+and they are distinguishable. If added flexibility is being spent
+suppressing power above 30 Hz, it is the Szegő problem. If the fitted AR
+roots move to low frequencies, the noise model is absorbing evoked signal.
+Plotting the fitted AR spectral density by order settles which, and it is
+worth the twenty minutes because the two call for different responses.
+
+## The implementation detail that matters
+
+Plain subsampling is not decimation. Taking every eighth sample without an
+anti-alias filter folds any residual power above the new 64 Hz Nyquist
+into the retained band. On one trial the periodogram puts 0.3% of the
+power above 64 Hz, which in amplitude terms is around 5% of the signal
+standard deviation, not negligible against a P1 of a few microvolts. The
+specific risk is mains harmonics. Line noise at 50 Hz sits below the new
+Nyquist and stays put, but a 100 Hz harmonic folds to 28 Hz, directly into
+the range of interest.
+
+The best fix is to resample upstream in MNE, with `epochs.resample(128)`,
+which uses a proper polyphase resampler and handles epoch edges correctly.
+The fallback in `R/rbf_common.R` applies an FIR anti-alias filter before
+subsampling. Either is fine. `slice(seq(1, n(), by = 8))` is not.
+
+## The computational consequence
+
+The AR likelihood is $O(Tp)$ and the design matrix product is $O(TK)$, so
+decimating by 8 reduces the cost of a gradient evaluation by a factor of
+8, and in the multilevel model the total cost scales as
+$N_{\text{curves}} \times T$, so the factor applies to the whole thing.
+The realised speedup will probably exceed 8 because the geometry at
+1024 Hz is far worse, but that is a claim to measure rather than assert.
+
+The larger gain is that $T = 154$ makes the marginalisation in section 4
+practical, which $T = 1229$ does not.
+
+# The prior on the weights
+
+## As a precision matrix
+
+The ridge-plus-curvature prior is stated in `models.qmd` as two univariate
+statements, which is how it is written in Stan and how it is easiest to
+read. It is a single multivariate normal.
+
+Let $D$ be the $(n-2) \times n$ second-difference matrix for a block of
+$n$ weights, so $(Dw)_m = w_{m+2} - 2w_{m+1} + w_m$. Then the two
+statements together give $w$ a mean-zero Gaussian prior with precision
+
+$$
+P \;=\; \frac{1}{\tau_{\text{ridge}}^2}\,I_n
+\;+\; \frac{1}{\tau_{\text{curv}}^2}\,D^\top D .
+$$
+
+This is the standard penalised-regression prior
+$w \sim \mathrm{N}(0, \sigma^2 S^{-}/\lambda)$ with $S = D^\top D$, and
+the pseudo-inverse in that expression is not a typo. $D^\top D$ has rank
+$n - 2$, with a null space spanned by the constant and linear sequences in
+$k$, so the curvature term alone gives an improper prior in those two
+directions. The ridge term is what makes $P$ full rank and the prior
+proper. Dropping it leaves the pre-stimulus baseline free to drift on an
+unpenalised linear trend in the weights.
+
+The equivalent construction in `mgcv` is `bs = "cs"`, a cubic shrinkage
+spline, which is a cubic spline with a ridge component added to penalise
+its own null space. Those are the smooths used in the behavioural noodle
+plots in the conference slides, incidentally, so the device is already in
+use in this project.
+
+This form is what `prior_predictive_check()` in `R/rbf_common.R` samples
+from. It builds $P$, inverts it, takes a Cholesky factor and multiplies
+standard normals. That is the direct way to draw from the prior the model
+states, and it is why the prior predictive check is trustworthy rather
+than an approximation to the prior.
+
+## Why it is a penalised spline and not a ridge prior
+
+Worth restating because the distinction is easy to lose. A prior
+$w_k \sim \mathrm{N}(0, s^2)$ with $s$ estimated is a real improvement on a
+fixed $s$, but it is a ridge penalty, $\lambda\|w\|^2$, and it shrinks
+weights towards zero rather than towards each other. Under it, smoothness
+is controlled entirely by the widths $\ell_k$, which are data. The amount
+of smoothing is asserted, not estimated.
+
+That said, the two are closer than they appear, and knowing why is useful.
+With iid weights of scale $s$, the implied prior on the curve is a
+Gaussian process with kernel $s^2 \sum_k \phi_k(t)\phi_k(t')$, which for a
+dense grid of Gaussian bumps of width $\ell$ is approximately squared
+exponential with length scale $\ell$. So an iid prior does deliver
+smoothing. It delivers exactly the amount that the choice of $\ell$
+dictates, with no way to revise it from the data. The global width
+multiplier $c$ recovers part of that ability at the cost of one parameter,
+and the curvature prior recovers the rest.
+
+## A curvature prior on the random effects
+
+Not used in the ladder, for the reason given in `models.qmd`: the group
+levels use only the coarse block, whose 171 ms spacing cannot produce a
+rough curve, so the restriction already does the work. If it turns out to
+be needed, for instance if the coarse block is later enlarged, the
+construction is as follows.
+
+The prior on a subject deviation $u_j$ is no longer diagonal, so the
+non-centred parameterisation needs a Cholesky factor. Build the precision
+once per leapfrog and share it across all $J$ subjects, which for
+$K_c = 8$ is an 8 by 8 operation and therefore free:
+
+```stan
+transformed parameters {
+  matrix[Kr, Kr] P_u = diag_matrix(rep_vector(inv_square(tau_ridge_u), Kr))
+                       + crossprod(D) * inv_square(tau_curv_u);
+  matrix[Kr, Kr] L_u = cholesky_decompose(inverse_spd(P_u));
+  matrix[Kr, J]  u   = L_u * z_subj;   // z_subj ~ std_normal()
+}
+```
+
+with `D` the $(K_r - 2) \times K_r$ second-difference matrix passed as
+data. The cost is one 8 by 8 symmetric inverse and one Cholesky per
+gradient evaluation, against the $T \times K_r \times J$ matrix product
+that dominates, so it does not change the runtime.
+
+Note that this couples the basis dimensions, so it is not the same model
+as the per-basis-function scales currently used, which correspond to
+`lme4`'s uncorrelated random slopes. Adopting it means giving up the
+direct comparison with the `lme4` smoke tests, which is a reason to defer
+it rather than an argument against it.
+
+# The AR parameterisation
+
+## The recursion
+
+Given partial autocorrelations $r_1, \dots, r_p$, each free in
+$(-1, 1)$, the Levinson-Durbin recursion produces the AR coefficients at
+every order $k \le p$,
+
+$$
+a_{kk} = r_k, \qquad
+a_{kj} = a_{k-1,j} - r_k\,a_{k-1,k-j} \quad (j < k),
+$$
+
+together with the variance ratios
+$v_{k} = \prod_{i \le k} (1 - r_i^2)$.
+
+Two things come from this at once.
+
+The image of $(-1,1)^p$ under this map is exactly the stationarity region,
+so stationarity is enforced by construction. For $p = 2$ the region is a
+triangle, and for general $p$ it is an awkward set that cannot be written
+as box constraints. Rejection sampling on the constraint gives a
+discontinuous posterior and poor Hamiltonian Monte Carlo behaviour, which
+is why this parameterisation is used rather than constraining $\varphi$
+directly.
+
+The exact likelihood comes for free. At time $t$, the best linear
+predictor of $\epsilon_t$ from its $t-1$ predecessors uses the
+order-$\min(t-1,p)$ coefficients the recursion already produced, with
+prediction variance $\sigma^2 v_{\min(t-1,p)}$. Summing the resulting
+one-step prediction error log densities gives the exact log-likelihood in
+$O(Tp)$, with no $T \times T$ matrix formed and no Cholesky. The easy
+alternative, conditioning on the first $p$ observations, is avoided at no
+cost.
+
+## Verification
+
+The implementation in `functions { ar_loglik }` has been checked against
+an explicit multivariate normal log density, with $\Sigma = \sigma^2 R$
+and $R$ the Toeplitz matrix built from the Yule-Walker autocorrelations of
+the same coefficients. The two agree to machine precision, with absolute
+differences of order $10^{-13}$ on log densities of order $10^2$, for
+$p = 0, 1, 2, 4$, including the $p = 0$ path which must reduce exactly to
+iid.
+
+This is worth redoing if the function is ever edited. Two details in it
+are easy to get wrong. The first $p$ observations each use a different row
+of the coefficient matrix and a different variance, and the reversal of
+row $p$ in the dot-product optimisation must line the coefficients up with
+$\epsilon_{t-p}, \dots, \epsilon_{t-1}$ in increasing index order.
+
+## Marginal against innovation scale
+
+The parameter $\sigma$ is the *marginal* standard deviation of
+$\epsilon$, not the innovation standard deviation $\sigma_a$. They differ
+by $\prod_i (1 - r_i^2)^{1/2}$, which for AR(2) with a strong rhythm is a
+large factor. Both are reported, the second as
+`sigma_innovation`.
+
+The marginal scale is the one to put a prior on, because it is on the
+scale of the observed data and can be read against the residual standard
+deviation of an iid fit. A prior on the innovation scale would be very
+hard to set sensibly, and for the Szegő reason above its posterior is
+pulled towards zero in a way that has nothing to do with the data.
+
+## Physical reading of low orders
+
+AR(1) is the discretely sampled Ornstein-Uhlenbeck process, equivalently a
+Matérn kernel with $\nu = 1/2$. Its autocorrelation is
+$\rho_h = \varphi^h$, monotone and never negative, so it cannot represent
+an oscillation. Fitted to a posterior electrode it degenerates to a random
+walk, with $\varphi$ running to 0.9999997.
+
+AR(2) with complex roots, which requires $\varphi_1^2 + 4\varphi_2 < 0$,
+has autocorrelation
+
+$$
+\rho_h \;\propto\; \varrho^{\,h}\cos(\omega h + \theta),
+\qquad
+\omega = \arccos\!\left(\frac{\varphi_1}{2\sqrt{-\varphi_2}}\right),
+$$
+
+a damped cosine, which is the discrete-time counterpart of a damped
+stochastic harmonic oscillator and has a Lorentzian spectral peak. This is
+the simplest object that can represent a rhythm. Fitted at POz it recovers
+$\omega$ corresponding to about 11 Hz at a 128 Hz sampling rate, which is
+the alpha band, and that was not a target of the fit. It is reasonable
+evidence that the residual model is describing something physiological
+rather than absorbing misfit, and the check is cheap enough to run at
+every rung.
+
+# Scaling to the full trial count
+
+## The problem
+
+The trial level carries $K_c$ coefficients per trial. At 47 subjects and
+roughly 180 trials each, $K_c = 8$ gives about 68,000 trial-level
+coefficients. That is the binding constraint on B3 and it is the reason
+the driver starts at 10 trials per subject rather than all of them. It is
+also a geometry problem, not only a memory problem, since each of those
+coefficients contributes a funnel with its scale parameter.
+
+## Marginalisation
+
+The trial effects are Gaussian and enter the mean linearly, so they can be
+integrated out analytically rather than sampled. For curve $n$,
+
+$$
+y_n \;\sim\; \mathrm{MVN}\!\left(
+  \alpha\mathbf{1} + Bw + B_r u_{s(n)},\;
+  \sigma^2 R + B_r \Omega B_r^\top
+\right),
+\qquad \Omega = \mathrm{diag}\!\left(\tau^{\text{trial}\,2}\right).
+$$
+
+The marginal covariance is a low-rank update of $\sigma^2 R$, with rank
+$K_c$, so Woodbury gives both the solve and the log determinant without
+ever forming a $T \times T$ matrix:
+
+$$
+\begin{aligned}
+\Sigma^{-1} &= G - G B_r \left(\Omega^{-1} + B_r^\top G B_r\right)^{-1} B_r^\top G,
+  \qquad G = (\sigma^2 R)^{-1}, \\
+\log|\Sigma| &= \log|\sigma^2 R| + \log\left|I + \Omega B_r^\top G B_r\right| .
+\end{aligned}
+$$
+
+The precision matrix $R^{-1}$ of a stationary AR($p$) is banded with
+bandwidth $p$, and `ar_loglik` already computes quadratic forms and log
+determinants against it in $O(Tp)$. So forming $GB_r$ costs
+$O(T K_c p)$, forming $B_r^\top G B_r$ costs $O(T K_c^2)$, and the
+$K_c \times K_c$ factorisation costs $O(K_c^3)$. With $T = 154$,
+$K_c = 8$, $p = 2$ that is on the order of $10^4$ operations per curve,
+against the $10^5$ or so a sampled trial level costs once its gradient is
+accounted for, and it eliminates roughly 68,000 parameters and their
+funnels.
+
+Two caveats. The per-trial coefficients are no longer sampled, so if they
+are wanted they have to be recovered afterwards by the conditional
+Gaussian formulae, which is straightforward but is extra work. And the
+marginalisation depends on the trial effects being Gaussian and entering
+linearly, so it would not survive a change to either.
+
+This is an optimisation to take once B3 is understood, not before. Getting
+it wrong silently produces a model that samples faster and is not the model
+intended.
+
+## Related identifiability note
+
+On a single trial the evoked response and the ongoing EEG are both smooth
+low-frequency processes on the same domain with no spectral gap between
+them, so the decomposition into mean and noise is weakly identified. The
+mean model and the noise model compete to explain the same structure and
+the split is determined partly by the priors.
+
+Two things resolve this and both are worth doing.
+
+Estimate the noise parameters from pooled pre-stimulus data, where there
+is no evoked signal by construction, and compare with the whole-epoch
+estimates. A material discrepancy indicates the whole-epoch noise model is
+absorbing signal. If they agree, the pre-stimulus estimates can be used as
+a tight prior, which separates the two estimation problems cleanly.
+
+Replication. In the multilevel model the evoked component is phase-locked
+across trials and the residual is not, and that asymmetry is what
+identifies the decomposition. The single-trial ambiguity is a property of
+the single-trial problem rather than of the eventual model, which is one
+more reason not to spend long tuning the AR order at B0.
+
+# Deferred: projection predictive selection
+
+Not part of the ladder, recorded so the plan is not lost.
+
+The original motivation for a sparsity prior was to reduce a dense basis
+to an interpretable subset. That question is better answered after
+fitting, and by projection rather than by indicator variables or a
+horseshoe, because a projection never asks whether an individual
+coefficient is nonzero. With columns as collinear as these, that question
+has no stable answer: if a peak sits between two centres, the posterior
+splits across both and across their combination, so no individual
+inclusion probability is high even when the peak is unambiguous.
+
+The projection asks instead whether a subset *spans* the fitted function,
+which is answerable however correlated the columns are.
+
+The procedure, implementable entirely as post-processing from the draws
+the current models already return. For each posterior draw $s$ there is a
+fitted mean $f^{(s)}$ and a noise covariance $\Sigma_s$. For a candidate
+subset $A$ of basis functions, solve
+
+$$
+\hat w_A^{(s)} \;=\; \arg\min_{w_A}\;
+\left(f^{(s)} - B_A w_A\right)^\top \Sigma_s^{-1}
+\left(f^{(s)} - B_A w_A\right),
+$$
+
+a generalised least squares fit of the submodel to the full model's fitted
+curve. Doing this for every draw gives a projected posterior for the
+submodel. Forward selection then adds whichever basis function most
+reduces the predictive divergence from the full model, stopping when the
+divergence stops falling materially.
+
+This gives a defensible number of basis functions rather than an arbitrary
+one, requires no change to the Stan models, uses the AR noise model
+correctly throughout, and has no discrete parameters. It is also the right
+way to test, rather than assume, whether a small basis suffices. If six of
+sixteen basis functions reproduce the fitted curve to within predictive
+tolerance, that is a reportable finding about the complexity of the evoked
+response. The same machinery would test the claim that a handful of
+component-shaped basis functions is enough, which is currently a belief
+rather than a result.
+
+The reference for the method is Piironen and Vehtari's work on projection
+predictive selection, implemented in `projpred`. The package will not
+handle these models directly, because of the custom noise model and the
+multilevel structure, so the projection above has to be implemented
+manually. It is a weighted least squares problem per draw per candidate
+subset, which is cheap.

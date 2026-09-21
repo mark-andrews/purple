@@ -1,0 +1,747 @@
+---
+title: "Modelling a Single-Trial ERP Waveform"
+subtitle: "Basis-function regression, and the choice of noise model"
+author: "Mark Andrews"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: false
+    theme: cosmo
+  pdf:
+    toc: true
+    number-sections: true
+execute:
+  echo: true
+  warning: false
+  message: false
+bibliography: references.bib
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(nlme)
+knitr::opts_chunk$set(fig.width = 8, fig.height = 4.5, fig.align = "center")
+accent <- "#BE0000"
+```
+
+# The problem
+
+Take the simplest possible version of the modelling problem. One
+subject, one trial, one electrode. The data are a single voltage
+waveform $y(t)$ observed at $T$ timepoints spanning $-200$ to $1000$ ms
+relative to stimulus onset. There is no averaging anywhere. This is
+what a single row of the eventual multilevel model has to deal with,
+and if the noise model is wrong here it will be wrong everywhere above
+it.
+
+The waveform is a nonlinear function of time. We want to describe it
+as a smooth function plus something else, and the whole substance of
+this document is what the something else should be.
+
+# The mean model
+
+## Basis-function regression
+
+A nonlinear function of time can be written as a linear combination of
+$K$ fixed nonlinear functions of time,
+
+$$
+f(t) \;=\; w_0 \;+\; \sum_{k=1}^{K} w_k \, \phi_k(t).
+$$
+
+The $\phi_k$ are deterministic and fixed in advance. The $w_k$ are
+ordinary regression coefficients. The model is nonlinear in $t$ but
+linear in $w$, so all the machinery of linear regression applies
+unchanged. Polynomial regression, spline regression, and Fourier
+regression are all instances of this. They differ only in the choice
+of $\phi_k$.
+
+We use Gaussian radial basis functions,
+
+$$
+\phi_k(t) \;=\; \exp\!\left( -\frac{(t - \mu_k)^2}{2 \ell_k^2} \right),
+$$
+
+with centres $\mu_k$ and widths $\ell_k$ fixed as data rather than
+estimated. This keeps the model linear in its parameters.
+
+The choice is deliberate and it is not a spline. The reason is
+interpretability. Each $\phi_k$ is a localised bump with a latency
+$\mu_k$ and a width $\ell_k$, which are the same quantities in which
+ERP components are described. A basis centred at 240 ms with a width
+of 40 ms is a P2p-shaped object before any data are seen. A B-spline
+basis function has no such reading, and neither does a polynomial
+term. Since the scientific questions here are about specific
+components at specific latencies, a basis whose elements are already
+component-shaped is worth having.
+
+Two densities of basis are used: a coarse set spanning the whole
+epoch, and a denser, narrower set concentrated over $0$ to $300$ ms
+where P1, N1, and P2p all sit.
+
+```{r}
+#| label: basis
+
+rbf_design_matrix <- function(x, centers, width) {
+  mapply(function(ctr, w) exp(-0.5 * (x - ctr)^2 / w^2), centers, width)
+}
+```
+
+## One caveat on conditioning
+
+Overlapping bumps are collinear. With widths equal to the centre
+spacing, the design matrix for the 16-function basis used here has a
+condition number of about 470, and the fitted weights come out in the
+hundreds against data with a standard deviation of 8 µV. There is
+heavy cancellation between neighbouring basis functions.
+
+This does not damage prediction, and it does not damage inference
+about the fitted curve, but it does mean that individual $w_k$ are not
+separately interpretable and that their standard errors are unstable.
+Any quantity you want to report should be a function of the fitted
+curve, such as $f(240)$ or the height of the fitted P2p peak, rather
+than a single weight. Narrowing the widths relative to the spacing
+reduces the overlap, and is worth an experiment.
+
+# The noise model
+
+## Why the question matters
+
+Write the model in vector form. Let $y$ be the $T$-vector of voltages,
+$B$ the $T \times K$ matrix with $B_{tk} = \phi_k(t)$, and $\epsilon$
+the $T$-vector of residuals:
+
+$$
+y \;=\; \alpha \mathbf{1} + B w + \epsilon.
+$$
+
+Whatever we assume about $\epsilon$, the least-squares estimate of $w$
+remains unbiased. What changes is its variance. Under
+$\epsilon \sim \mathrm{MVN}(0, \Sigma)$ the generalised least squares
+estimator has
+
+$$
+\mathrm{Var}(\hat{w}) \;=\; \left( B^{\top} \Sigma^{-1} B \right)^{-1},
+$$
+
+so the noise model enters inference only through $\Sigma^{-1}$. Get
+$\Sigma$ wrong and the point estimates are roughly fine while the
+uncertainty is wrong, possibly by a large factor. Everything below is
+therefore about calibration, not about fit.
+
+## Why iid is not defensible here
+
+The default assumption is
+$\epsilon_t \stackrel{\text{iid}}{\sim} N(0, \sigma^2)$, so
+$\Sigma = \sigma^2 I$ and
+
+$$
+\mathrm{Var}(\hat{w}) \;=\; \sigma^2 (B^{\top} B)^{-1},
+$$
+
+which shrinks like $1/T$. The assumption says that knowing
+$\epsilon_t$ tells you nothing about $\epsilon_{t+1}$.
+
+This is false, and not marginally so. A single-trial EEG waveform is
+visibly smooth. It has to be: the data were band-pass filtered at
+$1$-$30$ Hz, so by construction nothing in the record can change faster
+than 30 times a second, while the sampling rate is 1024 Hz. On top of
+that, the residual after removing a smooth evoked component is
+dominated by ongoing EEG, which is itself a strongly autocorrelated
+oscillatory process.
+
+Empirically, on the trial analysed here, the residual autocorrelation
+under an iid model is 0.77 at lag 1 and 0.34 at lag 2. It then crosses
+zero and reaches $-0.46$ by lag 6. The iid model is describing a
+process with none of this structure.
+
+## The general form: a multivariate normal residual
+
+The natural generalisation is to treat the residual not as $T$
+independent scalars but as a single draw from a $T$-dimensional
+Gaussian,
+
+$$
+\epsilon \;\sim\; \mathrm{MVN}\!\left(0, \; \sigma^2 R \right),
+\qquad R_{tt'} \;=\; \kappa(t, t'),
+$$
+
+where $\kappa$ is a correlation function. If the process is stationary,
+$\kappa$ depends only on the lag, $\kappa(t, t') = \rho(|t - t'|)$, and
+$R$ is Toeplitz. Every model below is a choice of $\rho$.
+
+## Why not a Gaussian (RBF) kernel
+
+The obvious first guess is the squared exponential,
+
+$$
+\rho(h) \;=\; \exp\!\left( -\frac{h^2}{2\lambda^2} \right).
+$$
+
+There are three reasons not to use it here, of increasing severity.
+
+**It has the wrong short-lag behaviour.** Its spectral density is
+$\propto \exp(-\lambda^2 \omega^2 / 2)$, decaying faster than any
+polynomial. Sample paths are infinitely differentiable. Real EEG, even
+after low-pass filtering, is rougher than this, and a process with
+Gaussian spectral decay cannot represent that.
+
+**It cannot represent an oscillation.** The squared exponential has a
+monotone decreasing spectral density with no peak anywhere, and a
+monotone decreasing autocorrelation function that never goes negative.
+The observed residual autocorrelation reaches $-0.46$ at lag 6. No
+choice of $\lambda$ can produce that. The mismatch is structural, not a
+matter of tuning. Since ongoing posterior EEG is dominated by the alpha
+rhythm, which is exactly a spectral peak, this rules the kernel out on
+physiological grounds as well as empirical ones.
+
+**It is the same object as the mean model.** This is the deepest
+objection. Radial basis function regression with $K$ Gaussian bumps and
+iid Gaussian weights converges, as $K \to \infty$, to a Gaussian
+process with a squared exponential kernel [@neal1996]. So a model with
+Gaussian RBFs in the mean and a Gaussian kernel in the residual is a
+model in which the residual term is the mean term with $K$ taken to
+infinity. The two components are not merely similar. They are the same
+model class, competing to explain the same structure, and the split
+between them is determined by the priors rather than by the data.
+
+Choosing a residual kernel from a family that cannot be written as a
+limit of the mean model is what makes the decomposition mean anything.
+
+## Autoregressive processes
+
+An AR($p$) process is defined by the recursion
+
+$$
+\epsilon_t \;=\; \sum_{j=1}^{p} \varphi_j \, \epsilon_{t-j} \;+\; a_t,
+\qquad a_t \stackrel{\text{iid}}{\sim} N(0, \sigma_a^2).
+$$
+
+There is no intercept, since $\epsilon$ is a mean-zero error process by
+construction. The innovation $a_t$ is essential and is the only iid
+term anywhere in the model. Everything correlated in $\epsilon$ is the
+accumulated history of past shocks passed through the recursion.
+
+The process is $p$th-order Markov: $\epsilon_t$ depends on the past
+only through $(\epsilon_{t-1}, \ldots, \epsilon_{t-p})$.
+
+This is not a different kind of model from the multivariate normal
+above. It is the same model, written recursively. The autocorrelation
+function of a stationary AR($p$) satisfies the Yule-Walker recursion
+
+$$
+\rho_h \;=\; \sum_{j=1}^{p} \varphi_j \, \rho_{h-j}, \qquad h \geq 1,
+$$
+
+and $R_{tt'} = \rho_{|t - t'|}$ gives the Toeplitz correlation matrix
+of the multivariate normal. The recursion and the covariance matrix are
+two views of one object.
+
+For the trial analysed here the fitted AR(2) coefficients are
+$\varphi_1 = 1.365$, $\varphi_2 = -0.631$, giving
+
+```
+       [,1]   [,2]   [,3]   [,4]   [,5]   [,6]   [,7]   [,8]
+[1,]  1.000  0.837  0.511  0.170 -0.091 -0.231 -0.258 -0.206
+[2,]  0.837  1.000  0.837  0.511  0.170 -0.091 -0.231 -0.258
+[3,]  0.511  0.837  1.000  0.837  0.511  0.170 -0.091 -0.231
+[4,]  0.170  0.511  0.837  1.000  0.837  0.511  0.170 -0.091
+```
+
+Toeplitz, as it must be, but with correlations that fall, cross zero,
+and go negative. This is the structure a Gaussian kernel cannot
+produce.
+
+## What AR(2) means physically
+
+When the characteristic polynomial $1 - \varphi_1 z - \varphi_2 z^2$
+has complex roots, which happens when $\varphi_1^2 + 4\varphi_2 < 0$,
+the autocorrelation function is a damped cosine,
+
+$$
+\rho_h \;\propto\; \varrho^{\,h} \cos(\omega h + \theta),
+\qquad
+\varrho = \sqrt{-1/\varphi_2}^{\,-1},
+\qquad
+\omega = \arccos\!\left( \frac{\varphi_1}{2\sqrt{-\varphi_2}} \right).
+$$
+
+This is the discrete-time counterpart of a damped stochastic harmonic
+oscillator: a resonant frequency with a Lorentzian spectral peak whose
+width is set by the damping. It is the simplest object that can
+represent a rhythm.
+
+For the fitted values above, the envelope decays by a factor of 0.794
+per sample and $\omega$ corresponds to **10.95 Hz** at a 128 Hz
+sampling rate. That is the alpha rhythm. It is worth being clear about
+what this is and is not. It is not a fitted target. The model was given
+two free parameters and independently recovered the dominant rhythm of
+posterior EEG, at a parieto-occipital electrode, where it is exactly
+what one would expect to find. It is reasonable evidence that the AR(2)
+residual is describing something physiological rather than absorbing
+misfit.
+
+Note also that AR(1) cannot do this. Its autocorrelation function is
+$\rho_h = \varphi^h$, monotone and never negative. Fitted to this
+trial, $\varphi$ runs to $0.9999997$, hard against the boundary, and
+the model degenerates into a random walk with a standard error on the
+intercept of 5052 against a point estimate of 279. It fails not because
+autocorrelation is the wrong idea but because a monotone
+autocorrelation function is the wrong shape.
+
+# Why AR($p$), out of infinitely many possibilities
+
+This is the substantive theoretical question, and it deserves a
+substantive answer rather than a list of models that happened to fit
+worse.
+
+The complaint is fair as stated. AR(2) beating iid, AR(1), and a
+squared exponential kernel is four points sampled from an infinite
+space. If the argument were only "we tried some and this one won", it
+would carry very little weight.
+
+The argument is not that. It is that AR($p$) is not a point in the
+space of covariance models. It is a **sieve**: a nested sequence of
+model classes whose union is dense in the class of stationary Gaussian
+processes.
+
+Two standard results make this precise.
+
+**Wold decomposition.** Any purely non-deterministic weakly stationary
+process can be written as an infinite moving average of uncorrelated
+innovations, $\epsilon_t = \sum_{j \geq 0} \psi_j a_{t-j}$. If the
+corresponding transfer function is invertible, this can be inverted to
+an infinite autoregression, $\epsilon_t = \sum_{j \geq 1} \pi_j
+\epsilon_{t-j} + a_t$.
+
+**Spectral approximation.** The spectral density of an AR($p$) process
+is
+
+$$
+S(\omega) \;=\; \frac{\sigma_a^2}{2\pi} \left| 1 - \sum_{j=1}^{p} \varphi_j e^{-\mathrm{i} j \omega} \right|^{-2},
+$$
+
+which is a rational function of $e^{-\mathrm{i}\omega}$. Any continuous
+spectral density bounded away from zero can be approximated uniformly
+by such a rational function, with the approximation error going to zero
+as $p$ increases.
+
+The consequence is that choosing AR($p$) is not choosing one kernel out
+of infinitely many. It is choosing a family that can approximate any of
+them, and then choosing the order $p$. That converts an unstructured
+search over an infinite space into a one-dimensional model-selection
+problem over a nested sequence, which is a problem we know how to
+handle.
+
+The squared exponential kernel is not a member of any such sequence. It
+is a single point, with a fixed spectral shape and no dial to turn if
+that shape is wrong.
+
+Two further properties make AR($p$) the practical choice rather than
+merely a defensible one.
+
+It has an exact state space representation, so the likelihood is
+evaluable in $O(Tp)$ by recursion. A general kernel requires a
+$T \times T$ Cholesky at $O(T^3)$. For $T = 154$ this is the difference
+between milliseconds and seconds; inside an MCMC loop over thousands of
+iterations and, eventually, thousands of trials, it is the difference
+between feasible and not.
+
+And its low-order members are physically interpretable. AR(1) is the
+discretely sampled Ornstein-Uhlenbeck process, equivalently a Matérn
+kernel with $\nu = 1/2$. AR(2) with complex roots is a damped harmonic
+oscillator. These are not arbitrary. They are the objects one would
+write down from first principles to describe broadband and rhythmic
+neural activity respectively.
+
+# How do we know it is good enough?
+
+Three criteria, and an honest account of what they say.
+
+## Criterion 1: does the residual model whiten the residuals?
+
+The definitive test. If $\epsilon \sim \mathrm{MVN}(0, \sigma^2 R)$ is
+correct, then the normalised residuals $L^{-1}\hat{\epsilon}$, where
+$LL^{\top} = R$, are iid standard normal. For an AR model these are the
+one-step prediction errors, obtained directly from the recursion. Test
+them for whiteness with the autocorrelation function and a Ljung-Box
+test. If they are white, the noise model has extracted all the linear
+structure and no further elaboration is warranted.
+
+## Criterion 2: nested model comparison
+
+AR($p$) is nested in AR($p+1$), so likelihood ratio tests and
+information criteria apply directly.
+
+## Criterion 3: stability of the reported quantity
+
+The scientifically honest criterion. If the conclusion you report,
+say the posterior interval for the fitted amplitude at 240 ms, is
+materially the same under AR(2), AR(3), and AR(4), then the exact order
+does not matter and you need not resolve it. If it changes, that
+sensitivity is itself the finding and should be reported.
+
+## What these criteria actually say on a single trial
+
+They do not settle the question, and it would be misleading to suggest
+otherwise.
+
+On this trial at 128 Hz, AIC continues to improve monotonically as $p$
+increases, from 988 at $p = 0$ to 191 at $p = 8$, with no sign of
+levelling off. The Ljung-Box test on the normalised residuals rejects
+whiteness at every order tried. The estimated innovation standard
+deviation falls steadily, from 5.32 µV at $p = 0$ to 0.35 µV at
+$p = 8$.
+
+The reason is the identifiability problem flagged earlier, and it is
+worth stating plainly. On a single trial the evoked response and the
+ongoing EEG are both smooth low-frequency processes on the same domain,
+with no spectral gap between them. A 16-function basis cannot capture
+all the smooth structure in the waveform, and a high-order AR is
+perfectly capable of capturing the remainder. So as $p$ grows, the
+noise model absorbs signal, the innovation variance collapses, and the
+likelihood improves without bound. **Order selection by likelihood on a
+single trial is not a well-posed problem.**
+
+Criterion 3 is more reassuring. The standard error of the fitted
+waveform at the P2p latency behaves like this:
+
+| $p$ | SE of $\hat f(240)$ |
+|-----|---------------------|
+| 0 (iid) | 2.07 |
+| 1 | 4.49 |
+| 2 | 3.05 |
+| 3 | 3.80 |
+| 4 | 3.01 |
+| 5 | 3.09 |
+| 6 | 3.66 |
+| 7 | 2.60 |
+
+The estimable quantity is far more stable than the individual weights,
+whose standard errors swing by a factor of three over the same range.
+Two things follow. The iid model understates uncertainty on the fitted
+curve by roughly 50%, consistently, and that conclusion does not depend
+on the AR order. And within $p = 2$ to $7$ the answer is essentially
+flat, so the exact order does not need resolving for this purpose.
+
+What this means practically is that AR(2) should be adopted as a
+defensible minimum, chosen on physiological grounds (it is the lowest
+order that can represent a rhythm, and it recovers alpha) rather than
+by AIC, which cannot arbitrate here. Two further steps are then worth
+taking.
+
+The first is to estimate the noise parameters from the pre-stimulus
+interval, where there is no evoked signal by construction, pooling
+across trials to get enough data, and then to fix them or use them as a
+tight prior when fitting the full epoch. This separates the two
+estimation problems cleanly.
+
+The second, and the real resolution, is replication. In the full
+multilevel model the evoked component is phase-locked across trials and
+the residual is not. That asymmetry is what identifies the
+decomposition. The single-trial ambiguity described here is a property
+of the single-trial problem, not of the eventual model.
+
+# Downsampling
+
+## What is being claimed
+
+The recordings are at 1024 Hz, band-pass filtered at 1 to 30 Hz, over
+epochs of 1.2 s, giving $T = 1230$ samples per trial. The claim is
+that these can be reduced to every eighth sample, $T = 154$ at 128 Hz,
+with no material loss.
+
+## Why it works
+
+The sampling theorem. A signal with no spectral content above $f_{\max}$
+is completely determined by samples taken at any rate above $2 f_{\max}$.
+The band-pass filter puts $f_{\max} = 30$ Hz. Decimating by 8 gives a
+new sampling rate of 128 Hz and a new Nyquist frequency of 64 Hz,
+comfortably above 30 Hz. The discarded samples are not additional
+information. They are the retained samples restated.
+
+Ordinarily decimation requires an anti-alias filter first, so that
+content above the new Nyquist does not fold down into lower
+frequencies. Here that filter has already been applied as part of
+preprocessing, so plain decimation is safe. It would not be safe on
+unfiltered data.
+
+## Verifying it empirically
+
+Decimate, interpolate back onto the original grid, and compare. On the
+trial analysed here:
+
+| decimation | rate | $T$ | RMSE / SD of signal |
+|---|---|---|---|
+| by 2 | 512 Hz | 615 | 0.005% |
+| by 4 | 256 Hz | 308 | 0.026% |
+| by 8 | 128 Hz | 154 | 0.850% |
+| by 16 | 64 Hz | 77 | 16.7% |
+
+At 128 Hz the reconstruction error is 0.069 µV against a signal
+standard deviation of 8.16 µV. Almost all of that error is at the two
+epoch edges, where the interpolating spline has data on only one side.
+Restricted to the interior of the epoch the error falls to 0.32% of the
+signal SD with a maximum absolute error of 0.08 µV. The P1 component
+has an amplitude of several µV, so the components survive with two
+orders of magnitude of margin.
+
+The breakdown at 64 Hz is reassuring rather than worrying. It is
+exactly twice the filter cutoff, so there is no headroom, and cubic
+spline interpolation is not sinc interpolation. The failure confirms
+the check is capable of detecting real information loss, which is what
+makes the clean result at 128 Hz meaningful.
+
+Confirmation from the periodogram of the same trial: 97.4% of the power
+lies below 30 Hz, 2.3% between 30 and 64 Hz (the filter's roll-off
+skirt), and 0.3% above 64 Hz. There is essentially nothing above the
+new Nyquist frequency to lose.
+
+## Why it is not a matter of fewer unknowns
+
+It is worth being precise about the mechanism, because there is a
+natural but mistaken way to describe it.
+
+Downsampling does **not** reduce the number of unknowns. The parameters
+are $\alpha$, the $K$ basis weights, $\sigma$, and the $p$
+autoregressive coefficients. That count is $K + p + 2$ regardless of
+$T$. Decimation changes the number of *observations*, not the number of
+things being inferred. If anything, reducing $T$ while holding the
+parameter count fixed makes the inference problem nominally harder, not
+easier.
+
+The correct statement is about information rather than dimension. The
+Fisher information for $w$ is
+
+$$
+\mathcal{I}(w) \;=\; B^{\top} \Sigma^{-1} B.
+$$
+
+Under the iid model $\Sigma^{-1} = \sigma^{-2} I$ and this grows
+linearly in $T$, which is precisely the bug: adding redundant samples
+appears to add information without limit. Under a correctly specified
+correlated $\Sigma$, the inverse downweights the redundancy, and as the
+sampling rate increases past the point where the samples become
+predictable from their neighbours, $\mathcal{I}(w)$ approaches a finite
+limit set by the underlying continuous-time process. Sampling faster
+than the bandwidth adds numbers, not evidence.
+
+So downsampling is close to free not because the model has less to do,
+but because a correct noise model already knows those samples were
+redundant. The two ideas are the same idea seen from two sides.
+
+## Why it is necessary, not merely permitted
+
+The stronger claim is that decimation is required for the noise model
+to be estimable at all, and this is demonstrable.
+
+Fitting AR($p$) to the same trial at the full 1024 Hz gives an
+estimated innovation standard deviation of 0.053 µV at $p = 2$ and
+approximately 0.001 µV at $p = 8$, with AIC falling to $-16600$. The
+model is claiming that the waveform is very nearly deterministic. In a
+sense it is right, because a 30 Hz band-limited signal sampled at 1024
+Hz genuinely is almost perfectly predictable one step ahead. But the
+consequence is that the likelihood becomes dominated by predicting the
+deterministic interpolation between samples rather than by anything
+about the signal, the autoregressive roots crowd onto the unit circle
+($\varphi = (1.986, -0.993)$ at $p = 2$), and the posterior geometry
+becomes badly conditioned. Model comparison across orders becomes
+meaningless, and any resulting standard errors are not credible.
+
+This is the oversampling degeneracy, and it is the real argument for
+decimation. At 1024 Hz you cannot fit a low-order autoregressive noise
+model without pathology. At 128 Hz you can.
+
+## The computational consequence
+
+The likelihood is $O(Tp)$, so decimating by 8 reduces the cost of a
+single gradient evaluation by a factor of 8. In the full multilevel
+model the total cost scales as
+$N_{\text{subjects}} \times N_{\text{trials}} \times T$, so the factor
+of 8 applies to the whole thing.
+
+The realised speedup will be at least 8 and probably more, because the
+number of gradient evaluations Hamiltonian Monte Carlo needs depends on
+the posterior geometry, and the geometry at 1024 Hz is far worse for
+the reason just described. But the honest framing is not that
+decimation makes a feasible model 8 times faster. It is that it makes
+an otherwise degenerate model well behaved, and the speedup comes on
+top.
+
+# Implementation in Stan
+
+## Parameterising the AR coefficients
+
+Two things need care.
+
+**Stationarity.** The AR coefficients must lie in the stationarity
+region, the set for which the roots of the characteristic polynomial
+lie outside the unit circle. For $p = 2$ this is a triangle; for
+general $p$ it is an awkward region that cannot be expressed as simple
+box constraints. Rejection sampling on the constraint produces a
+discontinuous posterior and poor Hamiltonian Monte Carlo behaviour.
+
+The solution is to parameterise by the **partial autocorrelations**
+$r_1, \ldots, r_p$, each free in $(-1, 1)$, and map them to the AR
+coefficients with the Levinson-Durbin recursion. The image of the open
+cube $(-1,1)^p$ under this map is exactly the stationarity region
+[@bnschou1973]. Stationarity is then enforced by construction, with a
+smooth unconstrained geometry.
+
+**Exact rather than conditional likelihood.** The easy option is to
+condition on the first $p$ observations. The exact likelihood requires
+the stationary distribution of the first $p$, which in general means a
+$p \times p$ solve.
+
+The same Levinson-Durbin recursion supplies this for free. At time $t$,
+the best linear predictor of $\epsilon_t$ from its $t-1$ predecessors
+uses the order-$\min(t-1, p)$ coefficients that the recursion produces
+along the way, with prediction variance
+$\sigma^2 \prod_{i \leq \min(t-1,p)} (1 - r_i^2)$. Accumulating these
+one-step prediction errors gives the exact log-likelihood, with no
+matrix ever formed and no Cholesky. This decomposition was verified
+against an explicit multivariate normal density and agrees to machine
+precision.
+
+Note that $\sigma$ in this parameterisation is the **marginal**
+standard deviation of $\epsilon$, not the innovation standard
+deviation. The two differ by $\prod_i (1 - r_i^2)^{1/2}$. The marginal
+scale is the more interpretable of the two and the easier to put a
+prior on, since it is on the scale of the observed data.
+
+Setting $p = 0$ recovers iid noise exactly, so one file fits both
+models.
+
+## The model
+
+```{.stan filename="stan/rbf_arp.stan"}
+data {
+  int<lower=1> T;                    // number of timepoints
+  int<lower=1> K;                    // number of basis functions
+  int<lower=0> p;                    // AR order; p = 0 gives iid noise
+  matrix[T, K] B;                    // RBF design matrix (no intercept column)
+  vector[T] y;                       // observed voltage
+  real<lower=0> prior_sd_w;          // prior sd for basis weights
+  real<lower=0> prior_sd_sigma;      // prior scale for residual sd
+}
+
+parameters {
+  real alpha;                        // intercept
+  vector[K] w;                       // basis weights
+  real<lower=0> sigma;               // MARGINAL sd of eps
+  vector<lower=-1, upper=1>[p] r;    // partial autocorrelations
+}
+
+transformed parameters {
+  // Levinson-Durbin: partial autocorrelations -> AR coefficients at
+  // every order up to p. a[k, 1:k] holds the order-k coefficients.
+  matrix[p, p] a = rep_matrix(0, p, p);
+  vector[p + 1] v;                   // v[k+1] = prod_{i<=k} (1 - r[i]^2)
+
+  v[1] = 1;
+  for (k in 1 : p) {
+    a[k, k] = r[k];
+    for (j in 1 : (k - 1)) {
+      a[k, j] = a[k - 1, j] - r[k] * a[k - 1, k - j];
+    }
+    v[k + 1] = v[k] * (1 - square(r[k]));
+  }
+}
+
+model {
+  vector[T] eps = y - alpha - B * w;
+
+  alpha ~ normal(0, prior_sd_w);
+  w ~ normal(0, prior_sd_w);
+  sigma ~ normal(0, prior_sd_sigma);         // half-normal via <lower=0>
+  r ~ uniform(-1, 1);                        // flat on the stationarity region
+
+  // Exact likelihood by prediction-error decomposition.
+  for (t in 1 : T) {
+    int k = min(t - 1, p);                   // order usable at this t
+    real mu = 0;
+    for (j in 1 : k) {
+      mu += a[k, j] * eps[t - j];
+    }
+    target += normal_lpdf(eps[t] | mu, sigma * sqrt(v[k + 1]));
+  }
+}
+
+generated quantities {
+  vector[p] phi;                             // AR coefficients
+  real sigma_innovation = sigma * sqrt(v[p + 1]);
+  vector[T] mu_fitted = alpha + B * w;
+  vector[T] log_lik;                         // for PSIS-LOO
+
+  for (j in 1 : p) {
+    phi[j] = a[p, j];
+  }
+
+  {
+    vector[T] eps = y - mu_fitted;
+    for (t in 1 : T) {
+      int k = min(t - 1, p);
+      real mu = 0;
+      for (j in 1 : k) {
+        mu += a[k, j] * eps[t - j];
+      }
+      log_lik[t] = normal_lpdf(eps[t] | mu, sigma * sqrt(v[k + 1]));
+    }
+  }
+}
+```
+
+## Fitting with cmdstanr
+
+The driver script is in `fit_rbf_arp.R`. It builds the data list,
+compiles once, and then runs the same model under each of CmdStan's
+inference algorithms.
+
+The algorithms differ in what they approximate and in what they cost.
+Full Hamiltonian Monte Carlo (`$sample()`) targets the exact posterior
+and is the reference against which the others should be judged.
+`$pathfinder()` runs a quasi-Newton optimisation and draws from a
+normal approximation along the trajectory; it is fast and is designed
+partly to supply initial values for HMC. `$laplace()` optimises to the
+posterior mode and uses the Hessian there, so it is exact for a
+Gaussian posterior and degrades smoothly as the posterior departs from
+one. `$variational()` (ADVI) fits a factorised or full-rank Gaussian by
+stochastic gradient descent, and is the least reliable of the four.
+`$optimize()` returns a point estimate only, the penalised maximum
+likelihood, with no uncertainty at all.
+
+For this model the posterior should be close to Gaussian in $w$
+conditional on the noise parameters, since the mean model is linear.
+The departures from normality will be in $\sigma$ and $r$. That
+suggests Laplace and Pathfinder will do reasonably well and are worth
+using for rapid iteration, with HMC reserved for the final fit. But
+that is a hypothesis to check by comparison, not an assumption. The
+comparison is the point of running all five.
+
+# What to do next
+
+The single-trial model here is the base case. Three things follow.
+
+Verify the decimation check on a sample of trials and subjects rather
+than the one trial used here. One trial is one trial.
+
+Estimate the noise parameters from pooled pre-stimulus data, where
+there is no evoked signal, and compare with the whole-epoch estimates.
+A material discrepancy would indicate that the whole-epoch noise model
+is absorbing signal.
+
+Extend to the multilevel case, where subject-level and trial-level
+random functions enter as deviations on the basis weights and the
+AR($p$) residual is nested within trial. The `form = ~ idx | trial_id`
+grouping, or its Stan equivalent, is essential there: without it the
+model will wrap the end of one trial into the start of the next, and
+the error is silent.
+
+# References
+
+::: {#refs}
+:::

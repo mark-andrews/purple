@@ -1,3 +1,40 @@
+# 12 September, 2026; 21:55
+
+To-dos accumulated over the last two days, previously spread across three separate entries (11 September and two from earlier today), gathered into one for easier reading later. What actually got done in that time is recorded in the entry below this one, unchanged.
+
+Code layout.
+This project needs a serious tidy-up of where the steps before preprocessing live.
+Right now some of that work sits inside `analysis/`, which is meant for interactive, non-pipeline exploration, not for steps that logically belong before `scripts/preprocess_eeg.py` runs.
+The distinction between raw-data preparation, preprocessing, and downstream analysis is not currently reflected in the code layout.
+That needs sorting out properly at some point, not solved in passing here.
+
+Raw data and Git LFS, a bigger and more concrete version of the point above.
+All the raw data (`raw-data/main` and `raw-data/child`) is going to move out of this repository entirely, into a separate, non-version-controlled project.
+Reason is Git LFS.
+It has been paid for and has still hit its limits after only a handful of clones, pushes, and pulls, and these files don't justify that cost or that fragility, they're set once and never change again after the one renaming pass each directory gets.
+The eventual home is a public neuroimaging data repository, not decided yet which one, staying local in the meantime.
+Once that move happens, `analysis/prepare_child_raw_data_files.py` (and whatever the equivalent for `raw-data/main` turns out to be), along with each directory's `readme.md`, `checksums.txt`, and `raw_data_integrity_check.py`, all move with the data, into that other project, not this one, since none of it is pipeline pre-processing or analysis.
+Until the move happens, `prepare_child_raw_data_files.py`'s docstring has been rewritten to spell out what it does step by step and to make explicit that it's meant to be run interactively, from inside the directory holding the original, pre-renaming files, so that whoever eventually has only the originals (from a backup, or from wherever this data ends up living) can reproduce exactly the same renamed, skipped, and deleted files already produced here.
+The script's hard-coded paths will need updating to point at wherever the data actually lives once it moves, that's a mechanical change, not attempted yet.
+
+`raw-data/main`'s `ThB_03_21_2024_12_10_57`, unrelated to the above.
+It has a json but no matching bdf, 47 bdf files against 48 json files (see that directory's own `raw_data_integrity_check.py`).
+The reason isn't recorded anywhere found so far, whether the EEG was never recorded for that session or was recorded and later judged unusable and removed.
+Worth tracking down, and if it turns out to be the latter, the json should probably be removed too for consistency, but not resolved here.
+
+# 12 September, 2026; 21:38
+
+Finished the raw-data/child renaming started on 11 September.
+Working from `analysis/check_child_raw_data_filenames2.py`, paired every bdf with its json, resolved the ambiguous cases where possible, and renamed everything to the raw-data/main scheme.
+Two sessions, SuA on 1 June 2025 and FA on 29 August 2025, were dropped rather than resolved.
+Each had more than one json against a single bdf, and the bdf's own header start time didn't line up with an ordinary single session for either candidate.
+Most likely explanation is that the EEG kept recording across more than one aborted or restarted behavioural attempt, so which json corresponds to the actual recording isn't known without checking trial by trial against the EEG triggers.
+One more json, the 15:13:09 attempt for MC on 16 February 2026, was dropped because it was truncated, 565 lines against 1669 for every other json in the directory.
+Three further files had no counterpart at all and were dropped for that reason alone, `FB_29August2025.bdf`, `SuB_1June2025.bdf`, and the json for `SA_12July2025`.
+A stray `.fif` file, `MA_11August2025cleaned.fif`, a processed file that had ended up in raw-data/child for no known reason, was deleted too.
+Final count came to 53 subjects, 53 bdf files and 53 json files, each pair sharing a basename and differing only in extension, matching what was expected for this sample.
+Added `raw-data/child/readme.md`, `checksums.txt`, and `raw_data_integrity_check.py`, the same approach already used in raw-data/main.
+
 # 27 August, 2026; 00:18
 
 Started adding EEG results to today's BPS conference talk (`presentations/bps-cog-2026`), grand-average ERPs across a representative subset of electrodes, not all 64: anterior (AF3, AFz, AF4), central (C3, Cz, C4), and parieto-occipital (PO7, POz, PO8, P7, Pz, P8), following the same collapse-over-subject-and-trial approach as `analysis/aug26_1.R`'s Figure x.3 (fixed y-scale, per-channel facet).
