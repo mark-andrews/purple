@@ -2,7 +2,7 @@
 
 This is a plain-language guide to the 64 scalp electrode labels used throughout the merged dataset (`Fp1`, `AFz`, `F3`, and so on), for someone who is doing the statistical analysis but did not run the experiment and does not have an EEG background.
 It is not a list of all 64 positions.
-For that, see `analysis/cap_map.jpeg` (the physical cap layout) and `analysis/Cap_coords_all.xls`, sheet `64-chan` (the spherical and Cartesian coordinates of each named position).
+For that, see `notes/cap_map.jpeg` (the physical cap layout) and `notes/Cap_coords_all.xls`, sheet `64-chan` (the spherical and Cartesian coordinates of each named position).
 
 ## Two different naming schemes, and how they relate
 
@@ -48,7 +48,7 @@ So `FC3` is fronto-central, moderately left of the midline.
 
 ### A rough map of the 64 positions
 
-This is a text approximation of `analysis/cap_map.jpeg`, a top-down view of the head with the nose at the top, for looking up roughly where a label sits without opening the image.
+This is a text approximation of `notes/cap_map.jpeg`, a top-down view of the head with the nose at the top, for looking up roughly where a label sits without opening the image.
 Left-right spacing within each row is scaled from the actual coordinates in `Cap_coords_all.xls`, so it is closer to the real layout than an evenly-spaced grid would be, but it is still a flattened approximation, not the diagram itself.
 For exact positions, use the JPEG or the coordinate sheet.
 

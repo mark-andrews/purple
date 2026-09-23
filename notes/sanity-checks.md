@@ -35,7 +35,7 @@ These do not need any knowledge of what a "real" ERP looks like, only what a pla
 - Units are microvolts (MNE's `to_data_frame`, used in the pipeline, returns data in µV). Preprocessed, filtered, average-referenced single-trial EEG is typically in the tens of µV, with occasional trial-level excursions into the low hundreds. Values consistently in the thousands, or consistently well under 1 µV, would indicate a unit or scaling problem rather than genuine signal.
 - The pre-stimulus baseline period (`time <= 0`) should have close to zero mean per trial per channel, by construction (this is asserted inside the pipeline at preprocessing time, step 8; re-confirming it here is a check that nothing corrupted the values between preprocessing and the final merge, not a check on the preprocessing logic itself).
 - Summing all 64 channels at a single timepoint should be close to zero, since the data was re-referenced to the average of all channels (step 8). A channel that is a wild outlier will show up as breaking this near-zero sum for every trial it appears in.
-- Per-participant, per-channel variance (the approach already sketched in `analysis/check_erp_plots.R`) is a good screen for a single bad channel across a whole session: a channel with implausibly high variance (loose contact, intermittent noise) or implausibly low, near-flat variance (poor contact, effectively disconnected) relative to the same channel in other participants, or relative to other channels in the same participant, is worth flagging for exclusion rather than trusting as-is.
+- Per-participant, per-channel variance is a good screen for a single bad channel across a whole session: a channel with implausibly high variance (loose contact, intermittent noise) or implausibly low, near-flat variance (poor contact, effectively disconnected) relative to the same channel in other participants, or relative to other channels in the same participant, is worth flagging for exclusion rather than trusting as-is.
 
 ## 3. Topography and known-response checks
 
@@ -56,5 +56,5 @@ To make the framing in the introduction concrete, this is the pattern to look fo
 
 ## 5. Practical starting point
 
-`analysis/check_erp_plots.R` already contains a first pass at several of these, grand-average ERP traces per channel split by stimulus type, and a per-trial, per-channel variance screen for flagging outlier channels.
+`analysis/check_erp_plots.R`, since deleted (see `purge.md`), contained a first pass at several of these, grand-average ERP traces per channel split by stimulus type, and a per-trial, per-channel variance screen for flagging outlier channels.
 Extending that script to produce the grand-average posterior-channel plot and the blink-topography check described above, both averaged across all participants first, then repeated per participant, is a reasonable next concrete step, and does not need any tooling beyond what that script already uses.

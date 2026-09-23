@@ -9,5 +9,9 @@
 **/__pycache__
 *.feather
 *.parquet
-data/main/combined_behaviour_data.csv
+data/**/*.csv
 *.sif
+tmp/
+# compiled Stan executables
+analysis/rbf_stan/rbf_b0_single_trial
+analysis/rbf_stan/rbf_multilevel

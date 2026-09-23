@@ -92,6 +92,16 @@ RUN set -e && \
 # To avoid a slow rebuild of the image every time we need a new package, we will put extra package installs here
 RUN Rscript -e 'install.packages(c("moments", "lme4", "lmerTest", "mgcv"), repos = "https://cloud.r-project.org")'
 
+# Stan tooling for analysis/rbf_stan/. cmdstanr is not on CRAN, so it comes
+# from the Stan r-universe. CmdStan itself is built into /opt/cmdstan, with
+# a version-independent symlink that CMDSTAN points cmdstanr at.
+RUN Rscript -e 'install.packages(c("posterior", "loo", "signal"), repos = "https://cloud.r-project.org")' && \
+    Rscript -e 'install.packages("cmdstanr", repos = c("https://stan-dev.r-universe.dev", "https://cloud.r-project.org"))' && \
+    mkdir -p /opt/cmdstan && \
+    Rscript -e 'cmdstanr::install_cmdstan(dir = "/opt/cmdstan", cores = parallel::detectCores(), quiet = TRUE)' && \
+    ln -s "$(ls -d /opt/cmdstan/cmdstan-* | sort -V | tail -1)" /opt/cmdstan/current
+ENV CMDSTAN=/opt/cmdstan/current
+
 # TODO: dead weight, remove. This was meant to give bind-mounted files
 # editable ownership without permission friction, matching the host UID,
 # but rootless Podman's default UID mapping doesn't work that way (see

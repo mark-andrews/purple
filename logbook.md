@@ -1,3 +1,56 @@
+# 23 September, 2026; 21:22
+
+Renamed the two basis-function modelling directories.
+`analysis/multilevel_rbf_stan/` is now `analysis/rbf_stan/`, and `analysis/multilevel_rbf/` is now `analysis/rbf_lme4/`.
+The old names hid the one real difference between them, which is Stan versus `lme4`, and "multilevel" misdescribed B0, a single-trial model.
+Earlier entries and `purge.md` use the old names and have deliberately been left as they were.
+
+The Stan directory was also consolidated.
+The first-generation single-trial AR(p) model and its document were superseded by B0 and deleted, and the three overlapping documents were merged into `models.qmd`.
+Details are in `purge.md` and the directory's `README.md`, which now sets out the step-by-step procedure.
+The single-trial CSV that the B0 scripts read had never been kept anywhere.
+`extract_b0_trial.R` now regenerates it, and it recovers the original trial (s17, block 1, trial 53), confirmed by reproducing the residual autocorrelations quoted in the documents.
+
+The substantive finding is that B0 does not work as written.
+Fitted end to end on that trial with iid, AR(2) and AR(4) noise, it shrank the waveform to a flat line in every case and let the noise term absorb the signal.
+The weight-scale parameters fell to about 1e-6, and the chains did not converge (R-hat 1.7 to 3.3, about 5 effective draws).
+The gls fit of the same trial finds clear structure, so the fault is in the model or its parameterisation, not the data.
+The likely cause is the sampler becoming stuck as the weight scales approach zero.
+Non-centring the weights, or a prior that keeps those scales away from zero, are the first things to try.
+B1 to B3 share the same weight prior, so B0 has to be fixed before any of them is fitted.
+
+# 21 September, 2026; 22:32
+
+Did first-pass on how to clean up the directory, since `analysis/` in particular has accumulated undifferentiated clutter and the project layout no longer distinguishes raw-data preparation, preprocessing-adjacent work, and current interactive analysis from one another.
+Nothing has been moved or deleted yet.
+This entry records the recommendation as given, to be returned to and acted on once priorities are settled.
+
+Organising principle proposed: `analysis/` should hold only current interactive exploration, matching its own stated purpose in `CLAUDE.md`.
+A dead line of work should be archived rather than left mixed in among live files, so the directory doesn't require archaeology every time it's opened.
+Raw-data preparation scripts, `prepare_child_raw_data_files.py` and `rename_raw_data_files.py`, stay where they are only until the raw-data move described in the 12 September entry below actually happens.
+
+Files judged confidently obsolete, candidates for outright deletion.
+`analysis/get_unprocessed_erp.R` reads `data/main/epochs_8_sept_2024.feather`, which no longer exists, and predates the entire current preprocessing pipeline, AutoReject, anomalous-trial masking, the parquet merge, none of which existed yet when it was written in September 2023.
+`analysis/compare_behav_and_eeginfo.R` reads from `data/pilots/pilot_26July2023/`, a directory no longer present anywhere in the tree, a one-off July 2023 pilot sanity check.
+`analysis/rbf_example_1.R` through `rbf_example_5.R`, their matching `.stan` files, and three compiled Stan binaries, `rbf_example_1`, `rbf_example_2`, `rbf_example_2a`, roughly 8.6MB total, checked into git as build artefacts, which they should never have been.
+These come from the Gaussian process dead end recorded in the 17 October 2024 entry below, and the commit that added them was itself titled "Add lots of crufty scripts to do rbfs and gps".
+`analysis/s13_b2_t14.csv`, added in that same commit and apparently scratch input for those scripts, is the exact file already flagged by eye as not belonging in the directory at all.
+Both `__pycache__` directories, under `analysis/` and under `pyutils/`, are untracked Python bytecode caches with no history to lose.
+
+One genuine judgment call, the two `multilevel_rbf` directories.
+`analysis/multilevel_rbf/` holds an eight-model Stan ladder, `m0_pooled.stan` through `m7_full.stan`, written 22 August, and its own `readme.md` says plainly that none of them have been fitted yet.
+`analysis/multilevel_rbf_stan/`, written 21 September, describes itself in its own `README.md` as "the Bayesian replacement for the `lme4` smoke tests in `analysis/multilevel_rbf/`".
+So the `m0`-`m7` files and `model_specification.qmd` are superseded and never fitted, reasonable to archive.
+But `smoke_test_lmer0.R`, `smoke_test_lmer1.R`, `smoke_test_lmer2.R`, and `m1_3_subject_trial_single_electrode.stan`, all in that same `multilevel_rbf/` directory, are still live: the newer README's own B0-B3 comparison table names them directly as the `lme4` counterparts each Stan rung is checked against.
+The directory needs splitting on that basis, not deleting wholesale.
+
+Other points raised, none acted on.
+`reports/papers/`, `reports/presentations/`, and `reports/misc/` each contain nothing but a placeholder readme saying "so far, empty", while the actual conference presentation, `presentations/bps-cog-2026/`, lives in a separate top-level `presentations/` directory outside that structure entirely.
+Worth deciding whether `reports/` is an intended structure that presentations should move into, or whether it should be dropped.
+`notes/rbf_to_gp_proof.md` is from the same October 2024 Gaussian-process dead end as the deleted rbf examples above, but its content, the RBF/GP equivalence, is still cited conceptually in the new `multilevel_rbf_stan/README.md`, so recommended to keep rather than archive.
+`analysis/exploratory_analysis_behavioural_data.R` and its `.Rmd` counterpart, `analysis/sample_size_determination.R`, and `analysis/rename_raw_data_files.py` are all old, 2023 to 2024, but document real prior decisions and preliminary checks rather than throwaway scratch work, so recommended to leave alone for now.
+`analysis/check_erp_plots.R` is explicitly called "hacky", "ropey", "interactive scratch code" in the 23 August entry below, and its functionality has likely been superseded by the later grand-average work in `aug26_1.R`, a candidate for archiving, though it may still be wanted as a reference.
+
 # 12 September, 2026; 21:55
 
 To-dos accumulated over the last two days, previously spread across three separate entries (11 September and two from earlier today), gathered into one for easier reading later. What actually got done in that time is recorded in the entry below this one, unchanged.
