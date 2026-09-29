@@ -463,6 +463,8 @@ if (is.null(child)) missing_plot() else {
 ## Children: grand-average ERPs
 
 Children (red) and adults (black), at the same electrodes as before.
+At posterior electrodes the children show a large positivity near 155 ms and a negativity near 230 ms, possibly the P1 and N1, larger and later than in adults.
+The recordings are clearly usable. A first look only.
 
 ```{r}
 #| fig-width: 8
@@ -488,14 +490,15 @@ if (is.null(child)) missing_plot() else {
 
 ## Children: posterior electrodes, child by child
 
-Black, each child's average. Red, the children's grand average.
+Black, each child's average, for children with at least 20 usable trials at that electrode. Red, the average of those children.
 
 ```{r}
 #| fig-width: 8
 #| fig-height: 5.5
 if (is.null(child)) missing_plot() else {
-  cga <- child$subject_avg |> summarise(voltage = mean(voltage), .by = c(channel, time))
-  child$subject_avg |>
+  csa <- child$subject_avg |> filter(n >= 20)
+  cga <- csa |> summarise(voltage = mean(voltage), .by = c(channel, time))
+  csa |>
     mutate(channel = factor(channel, levels = electrodes)) |>
     ggplot(aes(time, voltage)) +
     geom_line(aes(group = subject), alpha = 0.15) +
@@ -513,10 +516,11 @@ if (is.null(child)) missing_plot() else {
 - People differ most at the N1 and P2p
 - More accurate people: more positive at the P2p (POz, Oz) and N1 (PO8) in the model, not yet confirmed by a simpler corrected test
 - Easier comparisons: more positive at Pz from about 390 to 620 ms, later than the P2p, in both analyses
+- The child EEG (53 children, 4 to 12 years) is processed and usable, with clear but different posterior components
 - All preliminary
 
 ## Next steps
 
-- The child data (about 50 children, same task) is being processed, to compare the signature across development
+- Model the child data as the adults', to compare the signature and its links to acuity across development
 - Does the effect of difficulty depend on acuity? The literature suggests it does
 - A more general version of the model (Gaussian processes), and joint modelling of all electrodes

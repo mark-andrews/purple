@@ -17,7 +17,11 @@ The recordings have the same format and trigger codes as the adults', and the ex
 One recording (MA, 11 August 2025) was made with an extra, unconnected bank of 32 electrodes, which are dropped.
 One (MA, 16 February 2026) began after the first block had started, so that block's 30 dot trials are lost and the other blocks are numbered correctly.
 In the first recordings processed, AutoReject rejected anything from 3 to 112 of a child's 180 epochs, against a median of about 3% in the adults, so the number of usable trials will vary much more between children.
-Preprocessing was stopped this evening with 34 of 53 recordings done, to free the machine, and will be resumed once the model fits for the slides have finished.
+Preprocessing was paused in the evening to free the machine and completed just before midnight.
+The merge with the behavioural data then needed one more fix, since the child json files put a date in the participant code (and in one session a different code from the file name), so behaviour is now matched to EEG by the session's date-time.
+`data/child/` now has the same four files as `data/main/`.
+At POz the median child has 85 of 87 usable dot trials after artefact rejection and masking, but two children have fewer than 20.
+The child grand averages show a large posterior positivity near 155 ms and a negativity near 230 ms, possibly the P1 and N1, larger and later than in the adults, which is a first look only.
 
 # 29 September, 2026; 14:40
 
