@@ -1,3 +1,24 @@
+# 29 September, 2026; 19:15
+
+First look at the child data, in the course of setting up its preprocessing.
+
+There are 53 children, aged 4 to 12.
+Each did three blocks of the same task as the adults, with 30 dot trials and 30 blob trials per block, so 90 dot trials each against the adults' 200.
+Mean accuracy on the dots is 68%, ranging from 48% to 84% between children, against 75% to 92% in the adults.
+
+The children also saw a single fixed sequence, but a different one from the adults.
+Every child saw the same 30 dot trials in the same order, repeated identically as each block.
+The sequence has 29 distinct stimulus pairs, with ratios of larger to smaller from 1.02 to 1.45, and only 7 of those pairs are among the adults' 45.
+So differences between children cannot come from the stimuli, but stimulus effects cannot be compared directly between children and adults, since the two stimulus sets barely overlap.
+The first trial of every child block is again the same pair (47 against 59 dots), so the first-of-block effect found in the adults must be checked for here.
+The details are added to `notes/fixed-trial-sequence.md`.
+
+The recordings have the same format and trigger codes as the adults', and the existing preprocessing handles 51 of the 53 unchanged.
+One recording (MA, 11 August 2025) was made with an extra, unconnected bank of 32 electrodes, which are dropped.
+One (MA, 16 February 2026) began after the first block had started, so that block's 30 dot trials are lost and the other blocks are numbered correctly.
+In the first recordings processed, AutoReject rejected anything from 3 to 112 of a child's 180 epochs, against a median of about 3% in the adults, so the number of usable trials will vary much more between children.
+Preprocessing was stopped this evening with 34 of 53 recordings done, to free the machine, and will be resumed once the model fits for the slides have finished.
+
 # 29 September, 2026; 14:40
 
 Plan for the week to Saturday 3 October, agreed with Mark today, recorded so that it survives interruptions.

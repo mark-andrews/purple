@@ -17,3 +17,7 @@ analysis/rbf_stan/rbf_multilevel
 
 # Positron/VS Code workspace settings
 .vscode/
+
+# Caches written to the repository root by containers run with it as $HOME
+.fontconfig/
+:memory:*
