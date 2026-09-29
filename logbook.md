@@ -1,3 +1,41 @@
+# 29 September, 2026; 14:40
+
+Plan for the week to Saturday 3 October, agreed with Mark today, recorded so that it survives interruptions.
+This entry may be deleted once the plan is carried out.
+
+Step 1, the clean-up and squash merge of the RBF branch, is done (previous entry).
+
+Step 2 is a fully reproducible slide deck for Jessica, in `reports/presentations/plymouth-october-2026/`, rebuilt from the data rather than from any saved result.
+It is a two-stage pipeline.
+A heavy script, `prepare_results.R`, does everything that takes more than seconds and writes small result files to a git-ignored results directory.
+The Quarto document, rendered to PowerPoint, only reads those files and may contain any R code that runs in seconds.
+Every step that involves randomness takes a fixed seed, so that rerunning gives the same files, exactly so with the same container image on the same hardware.
+The heavy script builds the decimated trial cache, fits the corrected B4 (first trials excluded, previous trial's ratio, fixed effect scales) at POz, Oz, Pz, PO7 and PO8 in parallel, runs the item-level crossed mixed-model analysis of ratio, and computes behaviour by ratio, grand averages and the raw difference waves.
+B3 is not refitted for the slides.
+The run should take about five hours and must take less than twelve.
+The existing results in `tmp/` are kept until the new run is compared with them, since the new estimates should agree within Monte Carlo error, and a disagreement would be a problem in itself.
+The deck is plain, at most 20 slides, with a working title, taking background and method from the BPS Cog 2026 deck and adding the new results.
+The ratio result is presented from the item-level analysis, as preliminary.
+A readme in the directory says what the deck is for (Jessica's talk at Plymouth on 14 October 2026) and how to rebuild it.
+
+Step 3 is preprocessing the child data (53 subjects, in `../purple-raw-data/data/child`).
+The Snakefile gains rules that write `data/child/` with the same four files as `data/main/`, namely the combined behaviour CSV, the merged EEG and behaviour parquet, the masked parquet and a readme.
+The masking step, `scripts/mask_anomalous_trials.R`, becomes a Snakefile rule for both samples, since at present it is run by hand.
+`scripts/preprocess_eeg.py` is left untouched.
+A copy, `scripts/preprocess_eeg_child.py`, takes whatever changes the child data needs, and likewise for the behavioural script if the child JSON differs.
+Merging the adult and child scripts into one general script is later work, after the child data is processed.
+The first task is to compare a few child recordings with an adult one (channels, sampling rate, trigger codes, recording length), since that is where the unknowns lie.
+Then the child grand-average ERPs at every electrode are plotted, as was done for the adults in August (`reports/presentations/bps-cog-2026/prepare_presentation_data.R`), and one or two slides comparing them with the adults are added to the deck.
+If the EEG preprocessing is not working by Friday, the child behavioural results go in instead.
+
+Schedule.
+Tuesday, step 1, then the results script, tested on a subset and launched in full overnight.
+Wednesday, check the new results against the old and build the deck, and begin inspecting the child data.
+Thursday and Friday, the child pipeline and child ERPs.
+Saturday, send the deck to Jessica.
+The branch `get-rbf-stan-models-working-23-sept-2026` and the tag `rbf-stan-branch-final` are kept for a few days before the branch is deleted.
+Nothing is pushed to GitHub until Mark says so.
+
 # 29 September, 2026; 14:20
 
 The branch `get-rbf-stan-models-working-23-sept-2026` (23 to 29 September) has been squash-merged into main.
