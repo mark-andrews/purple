@@ -266,11 +266,12 @@ models$between_sd |> fac() |>
 ```
 
 
-## Acuity: higher-accuracy people have a larger P2p
+## Acuity: more accurate people, more positive P2p
 
 
 
 The model's waveform for a person one standard deviation below and one above average accuracy.
+Preliminary.
 The next slide shows where the difference is reliable.
 
 ```{r}
@@ -318,10 +319,11 @@ ggplot(acc, aes(time)) +
 
 ::: {.notes}
 Windows where the 90% band excludes zero after stimulus onset: `r paste(acc_windows$txt, collapse = "; ")`.
+The effect at POz and Oz is about 1.5 µV per SD of accuracy, and agrees with the slope of the participants' own average waveforms on accuracy, computed without the model.
 The bands are pointwise, so isolated short windows can appear by chance. The main pattern is higher-accuracy participants being more positive in the P2p window at the midline electrodes (POz, Oz), and in the N1 window at the lateral electrodes (PO7, PO8).
 :::
 
-## Acuity: the same pattern without the model
+## Acuity: a simpler check
 
 
 ```{r}
@@ -331,7 +333,8 @@ acc_cl <- raw$accuracy_clusters |> filter(p < 0.05) |>
 ```
 
 Simple averages: the more accurate half of participants minus the less accurate half, with a 90% interval.
-Cluster-based permutation tests: `r if (nrow(acc_cl) == 0) "no reliable cluster" else paste(acc_cl$txt, collapse = "; ")`.
+Corrected for multiple comparisons (cluster-based permutation tests), the reliable differences are `r if (nrow(acc_cl) == 0) "none" else paste(acc_cl$txt, collapse = "; ")`.
+This cruder comparison of two halves does not yet confirm the model's P2p-window effect.
 
 ```{r}
 #| fig-width: 8
@@ -361,7 +364,7 @@ All analyses leave out first trials and control for the previous trial.
 This is a known pitfall (Clark, 1973, "the language-as-fixed-effect fallacy"). Treating trials as independent would overstate the certainty of any difficulty effect. The experiment will be changed to randomise the sequence for future data collection.
 :::
 
-## Difficulty: easier comparisons, later positivity
+## Difficulty: easier comparisons, later positivity at Pz
 
 
 ```{r}
@@ -373,9 +376,9 @@ it_windows <- it |>
   mutate(txt = str_c(electrode, " ", start, " to ", end, " ms"))
 ```
 
-The change in the waveform as trials get easier, per standard deviation of log ratio, with stimulus pairs and participants both treated as random.
+The change in the waveform as trials get easier, per SD of log ratio, with stimulus pairs and participants both treated as random.
 Shaded, where the 90% interval excludes zero.
-Preliminary.
+Clearest at Pz, from about 390 to 620 ms, with brief windows near 350 ms elsewhere. Preliminary.
 
 ```{r}
 #| fig-width: 8
@@ -394,7 +397,7 @@ ggplot(it, aes(time)) +
 
 ::: {.notes}
 Windows where the 90% interval excludes zero after stimulus onset: `r paste(it_windows$txt, collapse = "; ")`.
-Crossed random-effects regression at each timepoint (participants and stimulus pairs), controlling for the previous trial's ratio. The effect after about 850 ms overlaps the responses, since easier trials are answered faster, so it may not be numerical processing. The main candidate is the positivity around 350 ms, which resembles the distance effect in the P3 range reported by Libertus and colleagues (2007) more than a P2p effect.
+Crossed random-effects regression at each timepoint (participants and stimulus pairs), controlling for the previous trial's ratio. The effect after about 850 ms overlaps the responses, since easier trials are answered faster, so it may not be numerical processing. The main candidate is the positivity at Pz from about 390 to 620 ms, confirmed by the cluster test on the next slide, which resembles the distance effect in the P3 range reported by Libertus and colleagues (2007) more than a P2p effect.
 :::
 
 ## Difficulty: easiest against hardest trials
@@ -508,8 +511,9 @@ if (is.null(child)) missing_plot() else {
 
 - The method recovers the P1, N1 and P2p signature from single trials
 - People differ most at the N1 and P2p
-- More accurate people: more positive waveform at the P2p (midline) and N1 (lateral), preliminary
-- Easier comparisons: more positive at about 350 ms, later than the P2p, preliminary
+- More accurate people: more positive at the P2p (POz, Oz) and N1 (PO8) in the model, not yet confirmed by a simpler corrected test
+- Easier comparisons: more positive at Pz from about 390 to 620 ms, later than the P2p, in both analyses
+- All preliminary
 
 ## Next steps
 
