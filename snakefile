@@ -12,13 +12,17 @@ RAW_DATA_DIR = os.path.abspath(config["raw_data_dir"])
 SAMPLES = ["main", "child"]
 TMP_DIR = "data/tmp"
 
-# The EEG preprocessing and merge scripts for each sample. The child script began as
+# The behaviour, EEG preprocessing and merge scripts for each sample. The child script began as
 # a copy of the adult one, so that the adult pipeline, which is known to
 # work, is left untouched while the child data is got working. The two
 # are to be merged into one script later.
 EEG_SCRIPT = {
     "main": "scripts/preprocess_eeg.py",
     "child": "scripts/preprocess_eeg_child.py",
+}
+BEHAVIOUR_SCRIPT = {
+    "main": "scripts/process_behaviour_raw_data.R",
+    "child": "scripts/process_behaviour_raw_data_child.R",
 }
 MERGE_SCRIPT = {
     "main": "scripts/merge_eeg_behaviour_data.R",
@@ -41,8 +45,10 @@ rule process_behaviour_data:
                           filename=raw_files(wc.sample, "json"))
     output:
         "data/{sample}/combined_behaviour_data.csv"
+    params:
+        script = lambda wc: BEHAVIOUR_SCRIPT[wc.sample]
     shell:
-        "Rscript scripts/process_behaviour_raw_data.R --input {input} --output {output}"
+        "Rscript {params.script} --input {input} --output {output}"
 
 rule process_raw_eeg_data:
     input:
