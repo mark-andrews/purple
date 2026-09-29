@@ -42,8 +42,14 @@ The bind is needed because Apptainer only sees the working directory and the hom
 The path can also be given on the command line, with `--config raw_data_dir=/path/to/raw/data`.
 Snakemake itself runs on the host, not in the container, and can be installed with `pipx install snakemake`.
 
-Running time: around 2.5 hours (measured on 23 November, 2024; container overhead is minor).
-The end product is `data/main/merged_eeg_behaviour_data.parquet`, one row per EEG timepoint per trial, joined against the behavioural covariates for that trial.
+Running time for the adult data: around 2.5 hours (measured on 23 November, 2024; container overhead is minor).
+The pipeline processes two samples, the adults (`main`) and the children (`child`), each into its own directory, `data/main` and `data/child`.
+Each gets the combined behavioural data (`combined_behaviour_data.csv`), the EEG epochs joined to it, one row per EEG timepoint per trial (`merged_eeg_behaviour_data.parquet`), and the same with anomalous channel and trial combinations masked (`merged_eeg_behaviour_data_masked.parquet`), which is what the analyses read.
+One sample can be built on its own by naming its target, for example `snakemake ... data/child/merged_eeg_behaviour_data_masked.parquet`.
+The child data uses its own copies of the EEG preprocessing and merge scripts (`scripts/*_child.*`), for now.
+
+The rules were rewritten in September 2026, after the adult data had been built, so Snakemake would rebuild the adult data because the rule code changed.
+Adding `--rerun-triggers mtime` makes it judge only by file times, and then the existing adult files count as up to date.
 
 ## Interactive development
 
