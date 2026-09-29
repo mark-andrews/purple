@@ -1,6 +1,7 @@
 # Extract every usable dots-epoch trial at the target electrodes, decimate
 # each trial from 1024 to 128 Hz, and write one long table to
-# tmp/trials_decimated.parquet, which the multilevel fits read.
+# tmp/trials_decimated.parquet, which the multilevel fits read. An optional
+# argument gives a different output path.
 #
 # Columns: subject, trial_id, block, trials, ratio, accuracy, time, and one
 # voltage column per electrode. A trial masked at an electrode is NA there
@@ -50,5 +51,7 @@ cat("trials", nrow(trial_info), " timepoints", length(keep),
     " usable trials per electrode:",
     map_int(decimated, \(M) sum(!is.na(M[1, ]))), "\n")
 
-dir.create("tmp", showWarnings = FALSE)
-arrow::write_parquet(out, "tmp/trials_decimated.parquet")
+args <- commandArgs(trailingOnly = TRUE)
+out_file <- if (length(args) >= 1) args[1] else "tmp/trials_decimated.parquet"
+dir.create(dirname(out_file), showWarnings = FALSE, recursive = TRUE)
+arrow::write_parquet(out, out_file)

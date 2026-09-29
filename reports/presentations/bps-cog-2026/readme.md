@@ -23,7 +23,7 @@ All paths below are relative to the repository root, and every R script must be 
 Steps 3 and 4 read the parquet file with `arrow`, so they need the devcontainer described in the top-level `readme.md`.
 
 1. Regenerate `data/main/merged_eeg_behaviour_data.parquet` and `data/main/combined_behaviour_data.csv` with the Snakemake pipeline.
-The raw data have moved to the sister repository `purple-raw-data`, but `snakefile` still reads from `raw-data/main`, so either `INPUT_DIR` or a symlink needs sorting out first.
+The raw data are outside this repository, and `snakefile` finds them through `raw_data_dir` in `config.yaml` (see the top-level readme).
 2. Run `Rscript scripts/mask_anomalous_trials.R` to write `data/main/merged_eeg_behaviour_data_masked.parquet`.
 This step is not yet part of the Snakemake pipeline and has to be run by hand.
 3. Run `mkdir -p tmp`, then `Rscript reports/presentations/bps-cog-2026/prepare_presentation_data.R`.

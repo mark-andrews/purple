@@ -59,10 +59,14 @@
 #              because estimating them from single trials made the
 #              posterior multimodal.
 #   warmup, sampling   iterations per chain, default 1000 each
+#   trials     the trial cache written by prepare_trials.R, default
+#              tmp/trials_decimated.parquet
+#   outdir     output directory, default tmp
 #
-# Reads tmp/trials_decimated.parquet, written by prepare_trials.R. Writes
-# tmp/ml_<tag>_draws.rds (draws of everything except the trial-level z and
-# log_lik), tmp/ml_<tag>_summary.rds, and tmp/ml_<tag>.png.
+# Writes <outdir>/ml_<tag>_draws.rds (draws of everything except the
+# trial-level z and log_lik), <outdir>/ml_<tag>_summary.rds (parameter
+# summaries, convergence over every parameter, and sampler diagnostics),
+# and <outdir>/ml_<tag>.png.
 
 library(tidyverse)
 library(cmdstanr)
@@ -78,7 +82,8 @@ opt <- list(model = "b3", electrode = "POz", p = "2", ntrial = "20",
             stanfile = "analysis/rbf_stan/rbf_multilevel.stan",
             kc = "8", kd = "8", dw = "300", ks = "all", adapt = "0.8",
             addeff = "0", fixeff = "0", effrid = "5", effcurv = "10",
-            nofirst = "0", prevratio = "0", items = "0")
+            nofirst = "0", prevratio = "0", items = "0",
+            trials = "tmp/trials_decimated.parquet", outdir = "tmp")
 for (a in args) {
   kv <- str_split_1(a, "=")
   stopifnot(length(kv) == 2, kv[1] %in% names(opt))
@@ -108,7 +113,7 @@ set.seed(10101)
 
 # Data ---------------------------------------------------------------------
 
-trials_all <- arrow::read_parquet("tmp/trials_decimated.parquet")
+trials_all <- arrow::read_parquet(opt$trials)
 
 # Trial order within blocks: the previous trial's log ratio where the
 # immediately preceding trial is in the data, and a first-of-block flag.
@@ -315,7 +320,7 @@ saveRDS(list(draws = draws, time = wide$time, subjects = subject_levels,
              basis = basis, loo = loo_result, opt = opt,
              pred_scale = pred_scale, a_subj = a_subj,
              true_effect = true_effect),
-        str_c("tmp/ml_", tag, "_draws.rds"))
+        file.path(opt$outdir, str_c("ml_", tag, "_draws.rds")))
 
 scalar_vars <- intersect(
   c("alpha", "width_mult", "tau_ridge", "tau_curv", "tau_subj",
@@ -327,7 +332,15 @@ summ <- fit$summary(scalar_vars)
 sd <- fit$sampler_diagnostics(format = "draws_df")
 # Convergence over every parameter, including the trial-level z.
 all_rhat <- fit$summary(NULL, "rhat", "ess_bulk")
-saveRDS(list(summary = summ, all = all_rhat), str_c("tmp/ml_", tag, "_summary.rds"))
+diagnostics <- tibble(
+  time_s = fit$time()$total, divergent = sum(sd$divergent__),
+  treedepth_hits = sum(sd$treedepth__ >= 10),
+  mean_stepsize = mean(sd$stepsize__), mean_leapfrog = mean(sd$n_leapfrog__),
+  max_rhat = max(all_rhat$rhat, na.rm = TRUE),
+  min_ess_bulk = min(all_rhat$ess_bulk, na.rm = TRUE)
+)
+saveRDS(list(summary = summ, all = all_rhat, diagnostics = diagnostics),
+        file.path(opt$outdir, str_c("ml_", tag, "_summary.rds")))
 
 pop <- fitted_curve_summary(fit, wide$time, "mu_pop")
 cat("\n==== ", tag, "\n")
@@ -356,4 +369,4 @@ g <- ggplot(pop, aes(x = time)) +
   labs(x = "Time from stimulus onset (ms)", y = "Voltage (uV)",
        title = tag,
        subtitle = "Grey: mean of subject averages. Red: population fit, median and 90% band.")
-ggsave(str_c("tmp/ml_", tag, ".png"), g, width = 7, height = 4)
+ggsave(file.path(opt$outdir, str_c("ml_", tag, ".png")), g, width = 7, height = 4)
