@@ -49,7 +49,7 @@ One sample can be built on its own by naming its target, for example `snakemake 
 The child data uses its own copies of the EEG preprocessing and merge scripts (`scripts/*_child.*`), for now.
 
 The rules were rewritten in September 2026, after the adult data had been built, so Snakemake would rebuild the adult data because the rule code changed.
-Adding `--rerun-triggers mtime` makes it judge only by file times, and then the existing adult files count as up to date.
+Adding `--rerun-triggers=mtime` (with the `=`, or the option takes the targets that follow as its values) makes it judge only by file times, and then the existing adult files count as up to date.
 
 ## Interactive development
 
