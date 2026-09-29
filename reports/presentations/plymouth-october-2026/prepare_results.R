@@ -12,9 +12,10 @@
 #              per subject with short chains, written to results-test/
 #              instead of results/. Its estimates mean nothing.
 #   stage=...  run only some stages, comma separated, from trials, fits,
-#              behaviour, erp, raw, items, models. Default all, in that
-#              order. Every stage after trials reads the trial cache, and
-#              models reads the fits.
+#              behaviour, erp, raw, items, child, models. Default all, in
+#              that order. The adult stages after trials read the trial
+#              cache, and models reads the fits. child reads the
+#              preprocessed child data, and is skipped if it is missing.
 #
 # Input: data/main/merged_eeg_behaviour_data_masked.parquet and
 # data/main/combined_behaviour_data.csv, from the Snakemake pipeline.
@@ -32,7 +33,7 @@
 library(tidyverse)
 
 args <- commandArgs(trailingOnly = TRUE)
-opt <- list(test = "0", stage = "trials,fits,behaviour,erp,raw,items,models")
+opt <- list(test = "0", stage = "trials,fits,behaviour,erp,raw,items,child,models")
 for (a in args) {
   kv <- str_split_1(a, "=")
   stopifnot(length(kv) == 2, kv[1] %in% names(opt))
@@ -45,6 +46,16 @@ here <- "reports/presentations/plymouth-october-2026"
 out_dir <- file.path(here, if (test) "results-test" else "results")
 fit_dir <- file.path(out_dir, "fits")
 dir.create(fit_dir, showWarnings = FALSE, recursive = TRUE)
+
+# R reads a script as it executes it, so editing this file during a run
+# of several hours could break the run. The script therefore copies itself
+# into the results directory and runs the copy.
+if (!nzchar(Sys.getenv("PLYMOUTH_FROZEN"))) {
+  frozen <- file.path(out_dir, "prepare_results.R")
+  file.copy(file.path(here, "prepare_results.R"), frozen, overwrite = TRUE)
+  status <- system2("Rscript", c(frozen, args), env = "PLYMOUTH_FROZEN=1")
+  quit(status = status)
+}
 trials_file <- file.path(out_dir, "trials_decimated.parquet")
 masked_file <- "data/main/merged_eeg_behaviour_data_masked.parquet"
 
@@ -348,6 +359,67 @@ if ("items" %in% stages) {
   saveRDS(list(items = items, n_items = n_items,
                log_ratio_sd = sd(tr$log_ratio), log_ratio_mean = mean(tr$log_ratio)),
           file.path(out_dir, "items.rds"))
+}
+
+# Stage: child, behaviour and grand averages ------------------------------------
+
+child_masked <- "data/child/merged_eeg_behaviour_data_masked.parquet"
+child_beh_file <- "data/child/combined_behaviour_data.csv"
+if ("child" %in% stages) {
+  if (!file.exists(child_masked) || !file.exists(child_beh_file)) {
+    say("skipping child: preprocessed child data not found")
+  } else {
+    say("child behaviour and grand averages")
+    # As for the adults: dots trials, first trial of each block excluded.
+    cbeh <- read_csv(child_beh_file, show_col_types = FALSE) |>
+      filter(type == "dots", sb_trials != 1) |>
+      mutate(accuracy = as.numeric(accuracy),
+             ratio = pmax(left_size, right_size) / pmin(left_size, right_size),
+             log_ratio = log(ratio))
+    by_subject <- cbeh |>
+      summarise(accuracy = mean(accuracy), median_rt = median(rt, na.rm = TRUE),
+                n = n(), age = first(age), gender = first(gender), .by = subject)
+    grid <- tibble(ratio = seq(min(cbeh$ratio), max(cbeh$ratio), length.out = 50))
+    curves <- cbeh |>
+      group_by(subject) |>
+      group_modify(function(d, key) {
+        f <- glm(accuracy ~ log_ratio, family = binomial, data = d)
+        grid |> mutate(p = predict(f, tibble(log_ratio = log(ratio)), type = "response"))
+      }) |>
+      ungroup()
+    slopes <- cbeh |>
+      group_by(subject) |>
+      summarise(slope = coef(glm(accuracy ~ log_ratio, family = binomial))[2])
+
+    schema_names <- names(arrow::open_dataset(child_masked)$schema)
+    channels <- schema_names[which(schema_names == "Fp1"):which(schema_names == "O2")]
+    means <- set_names(map(channels, \(ch) rlang::expr(mean(!!rlang::sym(ch), na.rm = TRUE))),
+                       channels)
+    grand <- arrow::open_dataset(child_masked) |>
+      filter(type == "dots", sb_trials != 1) |>
+      group_by(time) |>
+      summarise(!!!means) |>
+      collect() |>
+      arrange(time) |>
+      pivot_longer(-time, names_to = "channel", values_to = "voltage")
+    subject_avg <- arrow::open_dataset(child_masked) |>
+      filter(type == "dots", sb_trials != 1) |>
+      select(subject, time, all_of(electrodes)) |>
+      collect() |>
+      pivot_longer(all_of(electrodes), names_to = "channel", values_to = "voltage") |>
+      filter(!is.na(voltage)) |>
+      summarise(voltage = mean(voltage), n = n(), .by = c(subject, channel, time))
+    # Trials per child with usable EEG at POz, after AutoReject and masking.
+    usable <- arrow::open_dataset(child_masked) |>
+      filter(type == "dots", sb_trials != 1, time == 0) |>
+      select(subject, POz) |>
+      collect() |>
+      summarise(n_trials = n(), n_usable = sum(!is.na(POz)), .by = subject)
+    saveRDS(list(by_subject = by_subject, curves = curves, slopes = slopes,
+                 n_trials = nrow(cbeh), grand = grand, subject_avg = subject_avg,
+                 usable = usable),
+            file.path(out_dir, "child.rds"))
+  }
 }
 
 # Wait for the fits ------------------------------------------------------------
