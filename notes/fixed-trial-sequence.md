@@ -23,12 +23,17 @@ Within the sequence, ratio is not correlated with position (r = -0.03) or with b
 The reason for using a fixed sequence was not documented, and the most likely mechanism is a fixed random seed in the experiment code.
 It may have been a deliberate design choice or not.
 For the analysis and its reporting this does not matter, since the consequences are the same either way.
-Still to be checked in the experiment code (`mark-andrews/adak`): how the sequence and the dot arrays were generated, whether the dot images themselves were fixed and can be regenerated exactly, and whether the child data were collected with the same sequence.
+Still to be checked in the experiment code (`mark-andrews/adak`): how the sequence and the dot arrays were generated, and whether the dot images themselves were fixed and can be regenerated exactly.
+
+The child data, checked on 29 September 2026, also used one fixed sequence, but not the adults' one.
+Every one of the 53 children saw the same 30 dot trials in the same order, repeated identically as each of three blocks (agreement 1.0 in every child).
+The sequence has 29 distinct pairs, with ratios of larger to smaller from 1.02 to 1.45, and only 7 of those pairs are also among the adults' 45.
+The first trial of every child block is the same pair, 47 against 59 dots, so the first-of-block problem found in the adult data should be checked for in the child data too.
 
 ## Benefits
 
 - Differences between participants cannot come from differences in which stimuli they saw or in what order. This matters most for the individual-differences questions, such as how the ERP relates to ANS acuity, and a fixed order is a common recommendation in individual-differences research for exactly this reason.
-- If the child data used the same sequence, differences between adults and children cannot come from the stimuli either.
+- Within the child data, differences between children cannot come from the stimuli either. Between adults and children they can, since the two sequences share only 7 pairs, so adult-child comparisons of stimulus effects must allow for the different stimulus sets.
 - A single sequence can be checked once for unwanted patterns, such as long runs of one side or one difficulty.
 - Repeating the same 50 trials four times allows each stimulus's response to be checked for consistency across repetitions.
 - If the dot arrays were generated from a fixed seed, the exact stimuli can probably be regenerated from the code and all their properties measured.
