@@ -41,6 +41,12 @@ library(tidyverse)
 
 interactive_views <- FALSE
 
+# Input (the merged parquet) and output (the masked parquet), as
+# arguments, defaulting to the adult files.
+args <- commandArgs(trailingOnly = TRUE)
+input_file <- if (length(args) >= 1) args[1] else 'data/main/merged_eeg_behaviour_data.parquet'
+output_file <- if (length(args) >= 2) args[2] else 'data/main/merged_eeg_behaviour_data_masked.parquet'
+
 # ===== exploration step =====
 # This code is kept just to record that this step was done as a first step
 if (interactive_views) {
@@ -84,7 +90,7 @@ ipr <- function(x, p = 0.99) {
 }
 
 
-eeg_df <- arrow::read_parquet('data/main/merged_eeg_behaviour_data.parquet') |>
+eeg_df <- arrow::read_parquet(input_file) |>
   filter(!drop) |>
   select(-drop)
 
@@ -212,5 +218,5 @@ if (nrow(mismatches) > 0) {
 # write eeg_masked back to data/
 arrow::write_parquet(
   eeg_masked,
-  sink = 'data/main/merged_eeg_behaviour_data_masked.parquet'
+  sink = output_file
 )
