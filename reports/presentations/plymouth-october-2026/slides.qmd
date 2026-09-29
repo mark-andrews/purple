@@ -23,6 +23,12 @@ erp <- read_result("erp")
 raw <- read_result("raw")
 items <- read_result("items")
 models <- read_result("models")
+child_file <- file.path(res_dir, "child.rds")
+child <- if (file.exists(child_file)) readRDS(child_file) else NULL
+missing_plot <- function() {
+  ggplot() + annotate("text", x = 0, y = 0, size = 6,
+                      label = "Child results not yet computed") + theme_void()
+}
 
 accent <- "#BE0000"
 blue <- "#1F4E99"
@@ -420,6 +426,83 @@ ggplot(rr, aes(time)) +
   theme_minimal(base_size = 14)
 ```
 
+
+## Children: behaviour
+
+```{r}
+#| include: false
+if (!is.null(child)) {
+  ch_n <- nrow(child$by_subject)
+  ch_age <- range(child$by_subject$age)
+  ch_acc <- child$by_subject$accuracy
+}
+```
+
+`r if (is.null(child)) "Child results not yet computed." else sprintf("%d children aged %d to %d, the same task, %d trials each. Accuracy %.0f%% on average, from %.0f%% to %.0f%%.", ch_n, ch_age[1], ch_age[2], round(median(child$by_subject$n)), 100 * mean(ch_acc), 100 * min(ch_acc), 100 * max(ch_acc))`
+Grey, each child. Red, the children's average. Black, the adults' average.
+
+```{r}
+#| fig-width: 8
+#| fig-height: 5.5
+if (is.null(child)) missing_plot() else {
+  ch_mean <- child$curves |> summarise(p = mean(p), .by = ratio)
+  ad_mean <- beh$curves |> summarise(p = mean(p), .by = ratio)
+  ggplot(child$curves, aes(ratio, p)) +
+    geom_line(aes(group = subject), colour = "grey50", alpha = 0.35) +
+    geom_line(data = ch_mean, colour = accent, linewidth = 1.5) +
+    geom_line(data = ad_mean, colour = "black", linewidth = 1.2) +
+    scale_y_continuous(labels = scales::percent) +
+    labs(x = "Ratio of larger to smaller array", y = "Accuracy") +
+    theme_slide
+}
+```
+
+## Children: grand-average ERPs
+
+Children (red) and adults (black), at the same electrodes as before.
+
+```{r}
+#| fig-width: 8
+#| fig-height: 5.5
+if (is.null(child)) missing_plot() else {
+  bind_rows(child$grand |> mutate(group = "Children"),
+            erp$grand |> mutate(group = "Adults")) |>
+    filter(channel %in% sel) |>
+    mutate(channel = factor(channel, levels = sel)) |>
+    ggplot(aes(time, voltage, colour = group)) +
+    geom_hline(yintercept = 0, colour = "grey80") +
+    geom_line() +
+    scale_colour_manual(values = c(Adults = "black", Children = accent)) +
+    facet_wrap(~channel, ncol = 3) +
+    labs(x = xlab_time, y = "Voltage (µV)") +
+    theme_minimal(base_size = 13) + theme(legend.position = "top", legend.title = element_blank())
+}
+```
+
+::: {.notes}
+`r if (!is.null(child)) sprintf("Usable trials per child at POz after artefact rejection and masking: median %d of %d, range %d to %d.", round(median(child$usable$n_usable)), round(median(child$usable$n_trials)), min(child$usable$n_usable), max(child$usable$n_usable))`
+:::
+
+## Children: posterior electrodes, child by child
+
+Black, each child's average. Red, the children's grand average.
+
+```{r}
+#| fig-width: 8
+#| fig-height: 5.5
+if (is.null(child)) missing_plot() else {
+  cga <- child$subject_avg |> summarise(voltage = mean(voltage), .by = c(channel, time))
+  child$subject_avg |>
+    mutate(channel = factor(channel, levels = electrodes)) |>
+    ggplot(aes(time, voltage)) +
+    geom_line(aes(group = subject), alpha = 0.15) +
+    geom_line(data = cga |> mutate(channel = factor(channel, levels = electrodes)),
+              colour = accent, linewidth = 1) +
+    facet_wrap(~channel, ncol = 3) +
+    labs(x = xlab_time, y = "Voltage (µV)") +
+    theme_minimal(base_size = 14)
+}
+```
 
 ## Summary
 
