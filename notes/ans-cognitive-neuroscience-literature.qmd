@@ -1,0 +1,341 @@
+---
+title: "The cognitive neuroscience of the approximate number system"
+subtitle: "What the literature collected so far says, with emphasis on EEG and ERP signatures"
+date: 2026-09-28
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+  pdf:
+    toc: true
+    number-sections: true
+---
+
+# Scope and status
+
+This note summarises what is known about the cognitive neuroscience of the approximate number system (ANS), based on the literature collected for this project so far.
+It is a knowledge-base document, not a draft of any particular paper, and it is meant to be extended as more is read.
+
+It is not a comprehensive review.
+It covers the papers in the project's reference library and in the references of the BPS Cognitive Section 2026 presentation.
+The EEG and ERP papers were read in full from their PDFs.
+The behavioural, modelling and structural papers were read from their abstracts and, where needed, their main sections.
+Where a claim rests on a paper's description of other work that is not in the library, this is said explicitly.
+Several important papers are missing, and they are listed in @sec-gaps.
+
+One paper in the library, Haggard et al. (1993), a book on the sensorimotor foundations of higher cognition, has no bearing on the ANS and is not discussed.
+
+# The approximate number system in brief
+
+The ANS is the capacity to represent and compare the approximate number of items in a set without counting and without symbols (Dehaene, 1997; Feigenson et al., 2004; Odic & Starr, 2018).
+It is found in human infants, in adults, and in many non-human animals.
+
+Its defining behavioural signature is ratio dependence.
+Discriminating two numerosities becomes harder as their ratio approaches one, so that 8 against 16 is as easy as 16 against 32, and accuracy and response time follow Weber's law.
+In a comparison task this appears as the distance effect (closer numbers are harder) and the size effect (at a fixed distance, larger numbers are harder), which together amount to dependence on the ratio (Libertus et al., 2007).
+
+The standard account represents a numerosity $n$ as a noisy internal magnitude.
+In the linear version it is Gaussian with mean $n$ and standard deviation $w n$, and in the logarithmic version it has mean $\log n$ and constant standard deviation.
+The Weber fraction $w$ is then the usual index of an individual's precision, or acuity, with smaller $w$ meaning better discrimination.
+Which of the two representations fits behaviour depends on the task (Ratcliff & McKoon, 2018), a point taken up in @sec-acuity.
+
+Two further claims give the ANS its wider interest.
+First, individual differences in ANS acuity correlate with symbolic mathematics achievement (Halberda et al., 2008), and ANS acuity changes over development, improving through childhood.
+Second, training on approximate nonsymbolic arithmetic has been reported to improve symbolic addition and subtraction in adults, which was taken as evidence of a causal link between the ANS and symbolic mathematics (Park & Brannon, 2013).
+
+A distinction running through the neural literature is between small and large numbers.
+Sets of about one to three or four items can be apprehended exactly and rapidly (subitizing), plausibly by a system that tracks individual objects (parallel individuation), while larger sets are represented approximately by the ANS (Feigenson et al., 2004).
+Whether these are separate systems has been debated, and the ERP evidence bears on it (@sec-n1).
+A third regime has been proposed for very large, cluttered sets, where discrimination behaves like texture-density perception rather than number (Fornaciai & Park, 2017).
+
+# Where in the brain
+
+## The intraparietal sulcus
+
+The dominant view places the core numerical representation in the intraparietal sulcus (IPS).
+In an fMRI and high-density ERP study of symbolic comparison (words and digits, larger or smaller than 65), activation that correlated with numerical distance, independently of notation, was found mainly along the intraparietal sulci bilaterally and in the precuneus, with further contributions from the left middle temporal gyrus and posterior cingulate (Pinel et al., 2001).
+This was taken as evidence for a central, notation-independent semantic representation of quantity in a parietal network.
+
+ERP source localisation points the same way for nonsymbolic number.
+In an adaptation paradigm, the P2p response to changes in large numbers was localised primarily to the right intraparietal region, whereas the N1 response to small numbers was localised to extrastriate visual cortex (Hyde & Spelke, 2012).
+Mid-latency processing of small numbers was localised elsewhere, to the right temporo-parietal junction and left intraparietal regions.
+
+## Early visual cortex
+
+A more recent line of work shows that sensitivity to numerosity arises much earlier, in visual cortex.
+Using a regression approach on ERPs to dot arrays viewed passively, Park et al. (2016) found that numerosity explained more variance than other visual properties at about 75 ms over a medial occipital site and at about 180 ms over bilateral occipito-parietal sites.
+By presenting arrays in the upper and lower visual fields and exploiting the polarity inversion expected from the folding of the calcarine sulcus, Fornaciai, Brannon et al. (2017) localised the numerosity-sensitive response at about 90 ms primarily to V2 and V3, while the numerosity-sensitive activity at 210 to 230 ms over occipito-parietal sites showed no inversion and was attributed to a later stage in the dorsal stream.
+Using frequency-tagged EEG with numerosity decorrelated from other magnitudes, Van Rinsveld et al. (2020) found automatic occipital discrimination of changes in numerosity, total area and convex hull, but not density or dot size, and argued that numerosity is extracted as a primary visual feature in early visual cortex.
+
+This early activity is not, however, the perceived number.
+With the connectedness illusion, in which dots joined in pairs look fewer, activity before 100 ms and in V2 followed the physical number of dots, while activity after 150 ms, and in V3 with fMRI, reflected the perceived number (Fornaciai & Park, 2018).
+The authors concluded that early visual encoding of numerosity is not sufficient for the representation of numerical magnitude, and that perceptual encoding happens at or after the segmentation of the display into units.
+
+## A network rather than a single region
+
+Structural evidence suggests a broader network.
+In a voxel-based morphometry study of 249 young adults, better numerosity discrimination (smaller Weber fraction) was associated with greater grey matter volume in the left cerebellum, right temporal pole and right parahippocampal and fusiform region, and with smaller volume in the left IPS and bilateral pre- and postcentral gyri (Yuan et al., 2023).
+The authors read this as support for a network view rather than a single anatomical locus.
+
+The same shift is visible in accounts of developmental dyscalculia.
+Early accounts proposed a core deficit of quantity representation in the IPS, but current accounts treat dyscalculia as involving several interacting systems: quantity representation in parietal cortex, a visual number-form system in ventral temporo-occipital cortex, declarative memory in the medial temporal lobe, and cognitive control in prefrontal cortex (Menon & Chang, 2022).
+
+# ERP signatures {#sec-erp}
+
+## Paradigms
+
+Almost everything that follows depends on the paradigm, and the paradigms differ in ways that matter for interpreting any new result.
+Five kinds appear in this literature.
+
+| Paradigm | Studies | What the ERP is time-locked to |
+|---|---|---|
+| Comparison with a memorised standard | Dehaene (1996), Temple & Posner (1998), Pinel et al. (2001), Libertus et al. (2007) | A single number (digit, word or dot array) judged larger or smaller than a fixed standard |
+| Adaptation | Hyde & Spelke (2009, 2012), Grasso et al. (2022) | A test array following repeated presentations of an adapting number |
+| Sequential comparison | Pinhas et al. (2023), and the Paulsen studies it cites | The second of two arrays shown one after the other |
+| Passive viewing with regression on stimulus properties | Park et al. (2016), Fornaciai & Park (2017, 2018), Fornaciai et al. (2017), Gebuis & Reynvoet (2012, 2013) | A single array, often with an unrelated catch task |
+| Frequency tagging | Van Rinsveld et al. (2020) | Periodic changes in a rapid stream of arrays |
+
+In the first three, the ratio or distance that modulates the ERP is a relation between the current stimulus and a reference held in mind, whether a standard, an adapting number, or a previous array.
+In the fourth, the ERP is related to the properties of a single array (its numerosity, size and spacing), not to a ratio.
+None of these studies presents two arrays at the same time and measures a ratio effect on the ERP to that joint display.
+
+## The time course in outline
+
+The ERP to a visual dot array over posterior sites has a characteristic sequence, and the literature assigns different functions to its components.
+
+- **P1**, about 75 to 140 ms, a posterior positivity over medial occipital sites.
+- **N1**, about 140 to 200 ms, a posterior negativity.
+- **P2p**, about 180 to 250 ms in adults, the second posterior positivity ("P2 parietal", to distinguish it from the fronto-central P2). In children it is later, from about 250 ms and extending well beyond (Pinhas et al., 2023).
+- **P3** and later activity, from about 300 ms, broadly distributed and largest over centro-parietal sites, related to decision and response.
+
+Dehaene (1996) used the additive-factors logic with ERPs to separate these stages in symbolic comparison.
+A right-lateralised posterior P1 at about 104 ms showed no effects of the experimental conditions.
+Notation affected earlier activity.
+The distance effect appeared as a right-lateralised parieto-occipito-temporal positivity starting at about 175 ms for digits and 190 ms for written words, larger for numbers close to the standard.
+Response preparation (the lateralised readiness potential) and error processing (a medial prefrontal negativity on errors) followed.
+
+## P1 and the earliest response
+
+The earliest numerosity sensitivity, at about 75 to 90 ms over medial occipital sites, follows the physical number of items (Park et al., 2016; Fornaciai et al., 2017).
+It is unaffected when perceived number is changed without changing the display, by the connectedness illusion (Fornaciai & Park, 2018) or by adaptation (Grasso et al., 2022), which the BPS presentation summarised as P1 reflecting the physical stimulus rather than the perceptual estimate.
+Its pattern also differs between very small (1 to 4) and very large (100 to 400) numerosities (Fornaciai & Park, 2017), consistent with different early mechanisms for different numerical ranges.
+
+## N1 and small numbers {#sec-n1}
+
+In the small-number range (one to three items) the N1 (140 to 175 ms) is modulated by absolute number, not by ratio, becoming more negative as the number of items increases, whereas in the large range (8 to 24) the relation is weak and in the opposite direction (Hyde & Spelke, 2009).
+This, together with source localisation to extrastriate visual cortex (Hyde & Spelke, 2012), has been taken as the neural signature of parallel individuation, an attention-based system for individuating a few objects, and as evidence that small and large numbers are processed differently.
+
+For larger numbers the N1 behaves more like the P1.
+In the connectedness and adaptation studies it followed physical rather than perceived numerosity, and it was "virtually overlapped" across conditions that differed only in perceived number (Grasso et al., 2022).
+Libertus et al. (2007) found that distance effects on the N1 in their first experiment interacted with numerical size and appeared to reflect a sensory confound between small and large dot arrays, and they disappeared when only large numerosities were used.
+Fornaciai and Park (2017) found strong sensitivity to numerosity at about 160 to 180 ms over right occipito-parietal sites for both very small and very large numerosities, and Park et al. (2016) found it at about 180 ms over bilateral occipito-parietal sites, so the N1 latency range does carry numerosity information in passive viewing.
+
+## P2p, the candidate ANS signature
+
+The P2p is the component most often associated with the ANS.
+Three kinds of evidence support this.
+
+First, it is modulated by numerical distance or ratio.
+In comparison with a memorised standard, numbers near the standard produce a larger P2p positivity than numbers far from it, for Arabic digits and words (Dehaene, 1996), for digits and dot arrays in adults and five-year-olds (Temple & Posner, 1998), and for large dot arrays (8 to 30 dots judged against 15) once small-number sensory confounds are removed (Libertus et al., 2007).
+In the last study the effect began at about 180 ms in the transition from N1 to P2p over temporo-occipital sites and was significant at the P2p peak (210 to 250 ms) over temporo-occipital and inferior parietal sites.
+The same polarity for digits and dots was taken as evidence of a notation-independent semantic stage.
+In passive adaptation, the P2p (about 175 to 250 ms) was modulated by the ratio of change between the adapting and the test number for large numbers but not small ones (Hyde & Spelke, 2009).
+The authors summarised this literature as "in all cases, small ratio changes elicit higher P2p amplitudes than do large ratio changes", and argued that because their participants had no task, the ratio effect reflects spontaneous numerical computation rather than decision difficulty.
+
+Second, it tracks perceived rather than physical numerosity.
+Adaptation to a highly numerous array makes a later test array of 30 dots look less numerous, and in parallel the P2p (about 200 to 250 ms) to that array is reduced, most clearly over the left posterior electrodes, by an amount that correlates with each participant's behavioural underestimation (Grasso et al., 2022).
+Physical changes in number modulated both earlier components and the P2p, but the illusory change modulated only the P2p.
+The connectedness study (Fornaciai & Park, 2018) points the same way, with perceived number reflected from about 150 ms.
+
+Third, its sources are parietal, localised to the right intraparietal region for large-number changes (Hyde & Spelke, 2012), linking it to the fMRI findings on the IPS.
+
+The direction of the ratio effect is not consistent across paradigms, which matters for interpreting new results.
+Adult studies using a memorised standard or adaptation report larger P2p positivity for near, harder comparisons.
+Pinhas et al. (2023), with sequential comparison in children, report the opposite: a less positive posterior response for hard (3:4) than easy (1:2) ratios, 6.25 against 8.45 µV over 250 to 550 ms.
+Libertus et al. (2007) also found that in their second experiment the later P3, over central sites, was larger for far, easier comparisons.
+Temple and Posner (1998) reported that in their nonsymbolic condition the positivity was larger for far than near values, a reversal relative to digits that Libertus et al. (2007) later attributed to a sensory confound in small arrays.
+
+## Later components
+
+The P3 over centro-parietal sites peaks around the time of the response in comparison tasks (about 400 to 500 ms) and is larger for far, easier comparisons (Libertus et al., 2007).
+Gebuis and Reynvoet (2013) found a larger centro-parietal P3 for active than passive viewing of the same arrays, unrelated to numerosity itself, and interpreted it as general cognitive processing rather than number.
+Paulsen and colleagues, as described by Pinhas et al. (2023), reported distance-sensitive positivities at 350 to 450 ms in a same-different task and at 360 to 440 ms over centro-frontal sites in adults.
+Effects in this range are harder to attribute to numerical representation as such, because they overlap with decision and response processes, and response time itself depends on ratio.
+
+# The continuous magnitudes challenge
+
+A persistent difficulty is that numerosity is naturally confounded with continuous visual properties: with the same dots, more items mean more total area, a larger convex hull, higher density or longer total contour.
+Studies control some of these, but not all can be held constant at once.
+
+Gebuis and Reynvoet (2012) manipulated number and three visual cues (dot diameter, aggregate surface and convex hull) orthogonally during passive viewing, and found that the visual cues evoked N1 and P2 effects similar to those attributed to number.
+They argued that the standard methods of controlling visual cues are insufficient for EEG, because the cues still covary with number across the stimulus set, and that previously reported number effects are most likely due to imperfectly controlled continuous properties.
+When they controlled the cues so that none correlated with number across trials, no number-related effects remained, and effects emerged again when the data were sorted by visual cue instead.
+Gebuis and Reynvoet (2013) extended this to active processing, with 12, 18 and 27 dots and cues decorrelated from number, and found no numerosity-related effects at any electrode in either passive or active viewing, only effects of the visual cues at lateral occipital and parietal sites, in the time windows and at the electrodes usually attributed to number processing.
+
+These findings are part of a wider theoretical challenge.
+Leibovich et al. (2017) argued that the evidence no longer supports an innate number sense operating independently of continuous magnitudes, and proposed instead a "sense of magnitude" in which number and continuous magnitudes are processed together.
+Lourenco and Aulet (2022) proposed that visual number encoding is multidimensional, with cumulative area and other magnitudes encoded along with number and sustained through perception, and that the experience of number reflects selective attention to one dimension of an integral representation.
+
+Against this, the regression and frequency-tagging studies report sensitivity to numerosity that is larger than, and separable from, sensitivity to the other properties (Park et al., 2016; Van Rinsveld et al., 2020), and the illusion studies show that the P2p follows perceived number when the physical display is unchanged (Fornaciai & Park, 2018; Grasso et al., 2022).
+The debate is unresolved.
+For any new study, the practical implication is that how the stimuli were constructed, and which continuous properties covary with number, has to be known and reported.
+
+# Individual differences and development
+
+## ANS acuity and the ERP
+
+The evidence linking individual ANS acuity to the ERP is thin, and in the papers read here it is mainly about an interaction: individuals with better acuity show larger ratio-dependent ERP effects.
+
+Pinhas et al. (2023) recorded ERPs in 56 children aged 4.5 to 5.5 years during sequential comparison of arrays at ratios of 1:2 and 3:4, and measured their Weber fractions (0.18 to 1.12, median 0.58) in a separate simultaneous-comparison task.
+Across all children there was a ratio effect over parieto-occipital sites from 250 to 550 ms after the second array.
+Split at the median of $w$, the high-acuity children showed a ratio effect of about 4.25 µV and the low-acuity children about 0.15 µV, a significant interaction.
+The size of each child's ratio effect (hard minus easy, 250 to 550 ms) was related to acuity, a larger effect going with a smaller $w$ (Spearman's $\rho = 0.27$, $p = 0.048$), and accuracy in the EEG task correlated with $w$ ($r = -0.34$).
+
+Pinhas et al. (2023) describe two adult studies that are not in the library.
+Paulsen and Neville (2008) found positive deflections at 350 to 450 ms sensitive to numerical difference in a same-different task, modulated at the group level by behavioural accuracy.
+Paulsen et al. (2010) found centro-frontal distance-related ERPs at 360 to 440 ms that were smaller in adults with lower mathematical proficiency, and whose size correlated with the Weber fraction, larger distance effects going with better acuity.
+These are the key adult evidence and should be read directly.
+
+## Development
+
+Temple and Posner (1998) found that five-year-olds and adults showed a distance effect in the same parietal electrodes and the same time window, about 124 to 234 ms, for both digits and dot arrays, even though the children's responses took about three times as long.
+They concluded that the system for estimating quantity is in place before formal schooling.
+Pinhas et al. (2023) similarly argued for developmental continuity, while noting that the children's positivity is later and more extended than the adult P2p.
+The same paper summarises further developmental ERP work, not in the library, relating P2p amplitude in 8- to 10-year-olds to mathematical achievement.
+
+## Structural correlates
+
+The one structural study of individual differences in the library found acuity related to a distributed set of regions rather than a single one, and found smaller, not larger, left IPS grey matter volume in more acute individuals, a direction the core IPS account does not obviously predict (Yuan et al., 2023).
+
+# Measuring acuity {#sec-acuity}
+
+How acuity is measured matters for any analysis relating it to the ERP.
+
+The Weber fraction is estimated from accuracy alone.
+Park and Starns (2015) showed that $w$ is contaminated by speed-accuracy trade-off, because participants who respond quickly and less carefully appear less acute, and proposed the drift rate of the diffusion decision model, estimated from accuracy and response time distributions together, as a purer index of the quality of the numerical representation.
+They found drift rate a better predictor of symbolic mathematics than $w$.
+Ratcliff and McKoon (2018) integrated representation models with the diffusion model and found that which representation fits depends on the task.
+For deciding which of two side-by-side arrays has more dots, the logarithmic model fitted the decrease in accuracy and increase in response time with numerosity.
+Kang and Ratcliff (2020) extended this to non-numerical perceptual variables (dot area, convex hull), which affected both drift rate and non-decision time and interacted with numerosity.
+Ratcliff (2014) showed that drift rate extends psychometric functions beyond the range where accuracy is at ceiling, and that the z-transform of accuracy closely matches drift rate when accuracy is not at ceiling.
+Thompson et al. (2016), with children and adolescents, found that accuracy was mainly determined by drift rate and response time mainly by boundary separation, which were unrelated to each other.
+Hierarchical Bayesian estimation makes diffusion modelling feasible with modest samples (Chau et al., 2021), and a Stan implementation of the seven-parameter diffusion model exists (Henrich et al., 2023).
+Krajcsi et al. (2024) review the methodological problems in measuring acuity in young children, including task comprehension, non-numerical properties of the stimuli, inhibition, and the reliability and validity of acuity indices.
+Heng et al. (2025) offer a normative account of numerosity estimation under limited viewing time, combining efficient logarithmic coding with Bayesian decoding.
+
+For a study with a fixed stimulus set shared by all participants, accuracy and $w$ carry largely the same information, since accuracy is close to a monotone function of $w$.
+The drift rate is the main candidate for a better acuity measure.
+
+# Synthesis
+
+## What is reasonably well established
+
+1. The ERP to dot arrays carries information about numerosity from very early, about 75 to 90 ms over medial occipital sites, generated in early visual cortex (V2 and V3), following the physical number of items.
+2. A second stage around 150 to 230 ms over bilateral occipito-parietal sites is also numerosity sensitive, and from about 150 ms the response follows perceived rather than physical number.
+3. The P2p, about 180 to 250 ms in adults over parieto-occipital sites, is modulated by the ratio or distance between the current number and a reference, follows perceived number under adaptation, and has sources in the right intraparietal region. It is the leading candidate for an ERP signature of the ANS.
+4. Small numbers (one to three) behave differently, with N1 modulation by absolute number attributed to parallel individuation.
+5. The same distance-related ERP effects are found in five-year-olds and adults.
+
+## What is contested or unclear
+
+1. Whether ERP number effects reflect numerosity or the continuous visual properties that covary with it. Studies that decorrelated those properties found no number effects (Gebuis & Reynvoet, 2012, 2013), while regression and frequency-tagging studies found numerosity effects larger than those of other properties.
+2. The direction of the ratio effect on the P2p. Near, harder comparisons give larger positivity with a memorised standard or adaptation in adults, but easier comparisons do in sequential comparison in children.
+3. The relation of the P2p to individual acuity, for which the evidence here is one study in children and two adult studies known only second-hand, and which concerns mainly the size of the ratio effect rather than the waveform itself.
+4. The status of the IPS as the single core locus, given source localisation to early visual cortex for the earliest effects and structural evidence of a wider network.
+
+## Implications for this project
+
+This project uses a different design from all of the ERP studies above.
+Two arrays of 40 to 59 dots are shown at the same time, side by side, and the participant judges which is more numerous.
+The ERP is time-locked to the onset of that joint display.
+Several consequences follow for what to expect and how to analyse it.
+
+1. The ratio that the literature relates to the P2p is between the current stimulus and a reference held in mind. In a simultaneous display there is no such reference at onset, and the ratio is a relation between two arrays processed at the same time. The literature does not directly predict a P2p ratio effect in this design, or its direction.
+2. The ratios compared in the literature are far apart (1:2 against 3:4, changes of 1:1.5 to 1:3, 8 to 30 against 15). This project's ratios all lie between about 1.02 and 1.39. Any ratio effect should be expected to be much smaller than the 2 to 4 µV condition differences reported.
+3. The individual-differences claim in the literature is that better acuity goes with a larger ratio effect. Testing it needs an acuity-by-ratio interaction, not only a main effect of acuity on the waveform.
+4. Effects later than about 300 ms overlap with decision and response processes, and response time depends on ratio, so late ratio effects may reflect response timing rather than numerical representation.
+5. The continuous properties of the arrays (dot size, total area, convex hull, density) and how they covary with number and ratio in this stimulus set need to be established from the experiment's code, since they could produce or mask effects attributed to number.
+6. Accuracy is a reasonable acuity measure for a first analysis because the stimulus set is shared, but the diffusion-model drift rate is the better-motivated measure and could be estimated from the same behavioural data.
+
+# Gaps in the collection {#sec-gaps}
+
+These are cited by the papers above as directly relevant and should be obtained and read.
+
+- Paulsen, D. J., & Neville, H. J. (2008). The processing of non-symbolic numerical magnitudes as indexed by ERPs. Neuropsychologia, 46, 2532–2544. The adult sequential same-different study.
+- Paulsen, D. J., Woldorff, M. G., & Brannon, E. M. (2010). Individual differences in nonverbal number discrimination correlate with event-related potentials and measures of probabilistic reasoning. Neuropsychologia, 48, 3687–3695. The main adult evidence relating ERPs to the Weber fraction.
+- Soltész, F., & Szűcs, D. (2014). Neural adaptation to non-symbolic number and visual shape: An electrophysiological study. Biological Psychology, 103, 203–211. Cited by Pinhas et al. (2023) as a dissenting result on ratio modulation.
+- Szűcs, D., Soltész, F., Jármi, É., & Csépe, V. (2007). The speed of magnitude processing and executive functions in controlled and automatic number comparison in children. Behavioral and Brain Functions, 3, 23.
+- Heine, A., Tamm, S., Wißmann, J., & Jacobs, A. M. (2011). Electrophysiological correlates of non-symbolic numerical magnitude processing in children: Joining the dots. Neuropsychologia, 49, 3238–3246. Reports parietal effects at 300 to 600 ms.
+- Piazza, M., Izard, V., Pinel, P., Le Bihan, D., & Dehaene, S. (2004). Tuning curves for approximate numerosity in the human intraparietal sulcus. Neuron, 44, 547–555. The fMRI adaptation study underlying the IPS account.
+- Any study of ERPs to two simultaneously presented arrays, which is this project's design, and none of which has been found yet.
+
+# References
+
+Chau, E., Murray, C. A., & Shams, L. (2021). Hierarchical drift diffusion modeling uncovers multisensory benefit in numerosity discrimination tasks. PeerJ, 9, e12273. https://doi.org/10.7717/peerj.12273
+
+Dehaene, S. (1996). The organization of brain activations in number comparison: Event-related potentials and the additive-factors method. Journal of Cognitive Neuroscience, 8(1), 47–68. https://doi.org/10.1162/jocn.1996.8.1.47
+
+Dehaene, S. (1997). The number sense: How the mind creates mathematics. Oxford University Press.
+
+Feigenson, L., Dehaene, S., & Spelke, E. (2004). Core systems of number. Trends in Cognitive Sciences, 8(7), 307–314.
+
+Fornaciai, M., Brannon, E. M., Woldorff, M. G., & Park, J. (2017). Numerosity processing in early visual cortex. NeuroImage, 157, 429–438. https://doi.org/10.1016/j.neuroimage.2017.05.069
+
+Fornaciai, M., & Park, J. (2017). Distinct neural signatures for very small and very large numerosities. Frontiers in Human Neuroscience, 11. https://doi.org/10.3389/fnhum.2017.00021
+
+Fornaciai, M., & Park, J. (2018). Early numerosity encoding in visual cortex is not sufficient for the representation of numerical magnitude. Journal of Cognitive Neuroscience, 30(12), 1788–1802. https://doi.org/10.1162/jocn_a_01320
+
+Gebuis, T., & Reynvoet, B. (2012). Continuous visual properties explain neural responses to nonsymbolic number. Psychophysiology, 49(11), 1481–1491. https://doi.org/10.1111/j.1469-8986.2012.01461.x
+
+Gebuis, T., & Reynvoet, B. (2013). The neural mechanisms underlying passive and active processing of numerosity. NeuroImage, 70, 301–307. https://doi.org/10.1016/j.neuroimage.2012.12.048
+
+Grasso, P. A., Petrizzo, I., Caponi, C., Anobile, G., & Arrighi, R. (2022). Visual P2p component responds to perceived numerosity. Frontiers in Human Neuroscience, 16. https://doi.org/10.3389/fnhum.2022.1014703
+
+Haggard, P., Rossetti, Y., & Kawato, M. (1993). Sensorimotor foundations of higher cognition. Oxford University Press. https://doi.org/10.1093/acprof:oso/9780199231447.001.0001
+
+Halberda, J., Mazzocco, M. M. M., & Feigenson, L. (2008). Individual differences in non-verbal number acuity correlate with maths achievement. Nature, 455, 665–668.
+
+Heng, J. A., Woodford, M., & Polania, R. (2025). Efficient numerosity estimation under limited time. PLOS Computational Biology, 21(3), e1012790. https://doi.org/10.1371/journal.pcbi.1012790
+
+Henrich, F., Hartmann, R., Pratz, V., Voss, A., & Klauer, K. C. (2023). The seven-parameter diffusion model: An implementation in Stan for Bayesian analyses. Behavior Research Methods, 56(4), 3102–3116. https://doi.org/10.3758/s13428-023-02179-1
+
+Hyde, D. C., & Spelke, E. S. (2009). All numbers are not equal: An electrophysiological investigation of small and large number representations. Journal of Cognitive Neuroscience, 21(6), 1039–1053. https://doi.org/10.1162/jocn.2009.21090
+
+Hyde, D. C., & Spelke, E. S. (2012). Spatiotemporal dynamics of processing nonsymbolic number: An event-related potential source localization study. Human Brain Mapping, 33(9), 2189–2203. https://doi.org/10.1002/hbm.21352
+
+Kang, I., & Ratcliff, R. (2020). Modeling the interaction of numerosity and perceptual variables with the diffusion model. Cognitive Psychology, 120, 101288. https://doi.org/10.1016/j.cogpsych.2020.101288
+
+Krajcsi, A., Chesney, D., Cipora, K., Coolen, I., Gilmore, C., Inglis, M., Libertus, M., Nuerk, H.-C., Simms, V., & Reynvoet, B. (2024). Measuring the acuity of the approximate number system in young children. Developmental Review, 72, 101131. https://doi.org/10.1016/j.dr.2024.101131
+
+Leibovich, T., Katzin, N., Harel, M., & Henik, A. (2017). From "sense of number" to "sense of magnitude": The role of continuous magnitudes in numerical cognition. Behavioral and Brain Sciences, 40. https://doi.org/10.1017/S0140525X16000960
+
+Libertus, M. E., Woldorff, M. G., & Brannon, E. M. (2007). Electrophysiological evidence for notation independence in numerical processing. Behavioral and Brain Functions, 3. https://doi.org/10.1186/1744-9081-3-1
+
+Lourenco, S. F., & Aulet, L. S. (2022). A theory of perceptual number encoding. Psychological Review, 130(1), 155–182. https://doi.org/10.1037/rev0000380
+
+Menon, V., & Chang, H. (2022). Theories of dyscalculia. In The Cambridge handbook of dyslexia and dyscalculia (pp. 25–44). Cambridge University Press. https://doi.org/10.1017/9781108973595.003
+
+Odic, D., & Starr, A. (2018). An introduction to the approximate number system. Child Development Perspectives, 12(4), 223–229. https://doi.org/10.1111/cdep.12288
+
+Park, J., & Brannon, E. M. (2013). Training the approximate number system improves math proficiency. Psychological Science, 24(10), 2013–2019. https://doi.org/10.1177/0956797613482944
+
+Park, J., Dewind, N. K., Woldorff, M. G., & Brannon, E. M. (2016). Rapid and direct encoding of numerosity in the visual stream. Cerebral Cortex, 26(2), 748–763. https://doi.org/10.1093/cercor/bhv017
+
+Park, J., & Starns, J. J. (2015). The approximate number system acuity redefined: A diffusion model approach. Frontiers in Psychology, 6, 1955. https://doi.org/10.3389/fpsyg.2015.01955
+
+Pinel, P., Dehaene, S., Rivière, D., & LeBihan, D. (2001). Modulation of parietal activation by semantic distance in a number comparison task. NeuroImage, 14(5), 1013–1026. https://doi.org/10.1006/nimg.2001.0913
+
+Pinhas, M., Paulsen, D. J., Woldorff, M. G., & Brannon, E. M. (2023). Neurophysiological signatures of approximate number system acuity in preschoolers. Trends in Neuroscience and Education, 30. https://doi.org/10.1016/j.tine.2022.100197
+
+Ratcliff, R. (2014). Measuring psychometric functions with the diffusion model. Journal of Experimental Psychology: Human Perception and Performance, 40(2), 870–888. https://doi.org/10.1037/a0034954
+
+Ratcliff, R., & McKoon, G. (2018). Modeling numerosity representation with an integrated diffusion model. Psychological Review, 125(2), 183–217. https://doi.org/10.1037/rev0000085
+
+Temple, E., & Posner, M. I. (1998). Brain mechanisms of quantity are similar in 5-year-old children and adults. Proceedings of the National Academy of Sciences of the United States of America, 95(13), 7836–7841. https://doi.org/10.1073/pnas.95.13.7836
+
+Thompson, C. A., Ratcliff, R., & McKoon, G. (2016). Individual differences in the components of children's and adults' information processing for simple symbolic and non-symbolic numeric decisions. Journal of Experimental Child Psychology, 150, 48–71. https://doi.org/10.1016/j.jecp.2016.04.005
+
+Van Rinsveld, A., Guillaume, M., Kohler, P. J., Schiltz, C., Gevers, W., & Content, A. (2020). The neural signature of numerosity by separating numerical and continuous magnitude extraction in visual cortex with frequency-tagged EEG. Proceedings of the National Academy of Sciences, 117(11), 5726–5732. https://doi.org/10.1073/pnas.1917849117
+
+Yuan, X., Ni, L., Li, H., Zhang, D., & Zhou, K. (2023). The neural correlates of individual differences in numerosity perception: A voxel-based morphometry study. iScience, 26(8), 107392. https://doi.org/10.1016/j.isci.2023.107392

@@ -14,6 +14,282 @@ format:
 bibliography: references.bib
 ---
 
+# Specification of the current model {#sec-spec}
+
+This section is a complete mathematical statement of the model as implemented in `rbf_multilevel.stan` at the end of September 2026, the version used for the full-data fits at POz, Oz, Pz, PO7 and PO8.
+It is self-contained.
+The sections after it record the reasoning behind the original design, and where they disagree with this section, this section is correct.
+The main differences are listed in @sec-spec-changes.
+
+## Data
+
+One electrode is modelled at a time.
+There are $J$ subjects and $N$ trials, and trial $n$ belongs to subject $j[n]$.
+Each trial is an epoch of voltage from $-200$ to $995$ ms relative to stimulus onset, decimated from 1024 to 128 Hz with an anti-aliasing FIR filter (@sec-decimation), giving $T = 154$ samples at times $t_1, \ldots, t_T$.
+Trial $n$ is the vector $y_n \in \mathbb{R}^T$.
+Trials marked as artefactual at this electrode are excluded.
+At POz, $J = 46$ and $N = 8300$.
+
+## Basis functions
+
+The waveform is represented with $K = K_c + K_d$ Gaussian radial basis functions,
+$$
+\phi_k(t) = \exp\left( -\frac{(t - c_k)^2}{2 (m_{b(k)}\, \omega_k)^2} \right),
+\qquad k = 1, \ldots, K.
+$$
+There are two blocks.
+The coarse block has $K_c = 8$ centres $c_1, \ldots, c_8$ equally spaced from $t_1$ to $t_T$, with spacing about 171 ms.
+The dense block has $K_d = 31$ centres $c_9, \ldots, c_{39}$ equally spaced from 0 to 600 ms, with spacing 20 ms.
+The nominal width $\omega_k$ equals the centre spacing of the block that $k$ belongs to, $b(k) \in \{1, 2\}$.
+The multiplier $m_b$ scales the widths of block $b$.
+It is estimated in B1 and fixed at that estimate in B3 (@sec-spec-widths).
+
+$B$ is the $T \times K$ matrix with entries $B_{ik} = \phi_k(t_i)$.
+$B_c$ is its first $K_c$ columns, the coarse block.
+$\mathbf{1}$ is the vector of $T$ ones.
+
+## The model (B3)
+
+Each trial is the sum of a population waveform, its subject's deviation from it, its own deviation from its subject's waveform, and autocorrelated noise,
+$$
+y_n = \alpha \mathbf{1} + B w + B u_{j[n]} + B_c v_n + \varepsilon_n .
+$$
+The components are as follows.
+
+- $\alpha \in \mathbb{R}$ is an intercept and $w \in \mathbb{R}^K$ are the population weights. The population waveform is $f(t) = \alpha + \sum_k w_k \phi_k(t)$.
+- $u_j \in \mathbb{R}^K$ are the deviation weights of subject $j$, on the full basis. Subject $j$'s mean waveform is $f_j(t) = f(t) + \sum_k u_{jk} \phi_k(t)$.
+- $v_n \in \mathbb{R}^{K_c}$ are the deviation weights of trial $n$, on the coarse block only.
+- $\varepsilon_n \in \mathbb{R}^T$ is noise, independent across trials, following a stationary autoregressive process within the trial.
+
+### Noise
+
+Within each trial, $\varepsilon_n$ is a zero-mean stationary AR($p$) process,
+$$
+\varepsilon_{n,i} = \sum_{l=1}^{p} \varphi_l \, \varepsilon_{n,i-l} + \eta_{n,i},
+\qquad \eta_{n,i} \sim \mathrm{N}(0, \sigma_\eta^2),
+$$
+with $p = 2$ in all current fits.
+Equivalently, $\varepsilon_n \sim \mathrm{N}(0, \sigma^2 R)$, where $\sigma$ is the marginal standard deviation of the process and $R$ is its $T \times T$ Toeplitz correlation matrix.
+The model is parameterised by $\sigma$ and the partial autocorrelations $r_1, \ldots, r_p \in (-1, 1)$.
+The Levinson-Durbin recursion maps these to the coefficients $\varphi$, and every point of $(-1, 1)^p$ gives a stationary process, so stationarity holds by construction (@sec-spec-ar).
+The likelihood is exact, not conditional on the first $p$ samples.
+
+### Prior on the population weights
+
+$\alpha \sim \mathrm{N}(0, 10^2)$.
+
+The population weights are split by block, $w = (w_1, w_2)$, with $w_1 \in \mathbb{R}^{K_c}$ and $w_2 \in \mathbb{R}^{K_d}$.
+Each block has a Gaussian prior with precision matrix
+$$
+Q(\tau_r, \tau_c) = \frac{1}{\tau_r^2} I + \frac{1}{\tau_c^2} D^\top D,
+\qquad
+w_b \sim \mathrm{N}\big(0,\, Q(\tau_{r,b}, \tau_{c,b})^{-1}\big),
+$$
+with $\tau_{r,b}, \tau_{c,b} \sim \mathrm{N}^+(0, 10^2)$ independently, where $\mathrm{N}^+$ is the half-normal distribution.
+$D$ is the $(n-2) \times n$ second-difference matrix, for a block of $n$ weights,
+$$
+D = \begin{pmatrix}
+1 & -2 & 1 & & & \\
+& 1 & -2 & 1 & & \\
+& & \ddots & \ddots & \ddots & \\
+& & & 1 & -2 & 1
+\end{pmatrix},
+\qquad
+(D w)_k = w_{k} - 2 w_{k+1} + w_{k+2}.
+$$
+
+What this prior does is clearest from its log density,
+$$
+\log p(w_b \mid \tau_{r,b}, \tau_{c,b})
+= -\frac{1}{2} \left( \frac{\lVert w_b \rVert^2}{\tau_{r,b}^2} + \frac{\lVert D w_b \rVert^2}{\tau_{c,b}^2} \right)
++ \frac{1}{2} \log \lvert Q(\tau_{r,b}, \tau_{c,b}) \rvert + \text{const}.
+$$
+The first term is a ridge penalty.
+It shrinks all weights towards zero, penalising overall amplitude.
+The second term is a curvature penalty.
+Because the centres are equally spaced, the weights $w_{b,1}, w_{b,2}, \ldots$ can be read as a function of centre position sampled on a grid.
+$(D w)_k$ is then the discrete second difference of that sequence, approximately $h^2$ times its second derivative, where $h$ is the centre spacing.
+Because neighbouring basis functions overlap, the fitted curve is a smoothed version of the weight sequence, so penalising the curvature of the weight sequence penalises the curvature of the curve.
+Large excursions of the curve are cheap under this term provided they are smooth.
+Only rough, wiggly excursions are expensive.
+
+This is the penalised-spline (P-spline) penalty of @eilers1996.
+In penalised-likelihood terms, the posterior mode given the scales maximises
+$$
+\log p(y \mid w, \ldots) - \frac{\lambda_r}{2} \lVert w_b \rVert^2 - \frac{\lambda_c}{2} \lVert D w_b \rVert^2,
+\qquad \lambda_r = \tau_{r,b}^{-2},\ \lambda_c = \tau_{c,b}^{-2},
+$$
+which is a penalised likelihood with a ridge term and a roughness term, and the two smoothing parameters $\lambda_r$ and $\lambda_c$ are estimated rather than chosen.
+A pure ridge prior would be the case $\lambda_c = 0$.
+It penalises every weight equally regardless of whether the curve is smooth or rough, so it cannot distinguish a large smooth component from noise.
+
+The term $\frac{1}{2} \log \lvert Q \rvert$ matters when the scales are estimated.
+The prior must be stated as a single multivariate normal with precision $Q$.
+Stating it as two separate densities, $w_b \sim \mathrm{N}(0, \tau_r^2 I)$ and $D w_b \sim \mathrm{N}(0, \tau_c^2 I)$, gives the same quadratic form but the normalising terms $-n \log \tau_r - (n-2) \log \tau_c$ instead of $\frac{1}{2}\log\lvert Q \rvert$.
+With $\tau_r = \tau_c = \tau$ the difference is $-(n-2)\log\tau$ plus a constant, which multiplies the prior on $\tau$ by $\tau^{-(n-2)}$.
+That factor diverges at $\tau = 0$ and makes the posterior improper there, with all weights at zero.
+The original B0 had exactly this error, which is why it collapsed to a flat line.
+
+### Prior on the subject deviations
+
+The subject deviations are independent across subjects, $u_j \sim \mathrm{N}(0, S_u)$, with $S_u$ block diagonal over the two blocks.
+
+- Coarse block: $u_{j,1} \sim \mathrm{N}\big(0, \mathrm{diag}(s_1^2, \ldots, s_{K_c}^2)\big)$, one scale per basis function, $s_k \sim \mathrm{N}^+(0, 10^2)$.
+- Dense block: $u_{j,2} \sim \mathrm{N}\big(0, Q(\rho, \kappa)^{-1}\big)$, the same ridge-plus-curvature form as the population weights with its own two scales, $\rho, \kappa \sim \mathrm{N}^+(0, 10^2)$.
+
+The two forms serve different purposes.
+Independent scales in the coarse block let subject variability differ across the epoch.
+It is near zero before stimulus onset, because the data are baseline corrected, and substantial afterwards.
+The curvature prior in the dense block stops sharp structure shared by all subjects, such as P1, from being represented as 46 copies at the subject level instead of once in the population waveform.
+
+### Prior on the trial deviations
+
+$v_n \sim \mathrm{N}\big(0, \mathrm{diag}(q_1^2, \ldots, q_{K_c}^2)\big)$, independent across trials, with $q_k \sim \mathrm{N}^+(0, 10^2)$.
+Trial deviations use only the coarse block, which cannot produce rough curves, so that single-trial noise is not absorbed as trial-level signal.
+
+### Prior on the noise
+
+$\sigma \sim \mathrm{N}^+(0, 10^2)$, and $r_l \sim \mathrm{Uniform}(-1, 1)$ independently, which is uniform on the stationarity region.
+
+### Width multipliers {#sec-spec-widths}
+
+In B1, $m_b \sim \mathrm{LogNormal}(0, 0.5^2)$ and is estimated.
+In B3, $m_b$ is fixed at the B1 posterior median for that electrode, because estimating it from single trials made the posterior multimodal.
+
+| Electrode | $m_1$ (coarse) | $m_2$ (dense) |
+|---|---|---|
+| POz | 0.624 | 1.030 |
+| Oz | 0.649 | 0.903 |
+| Pz | 0.635 | 1.006 |
+| PO7 | 0.684 | 0.723 |
+| PO8 | 0.644 | 0.969 |
+
+This is a plug-in estimate, and the uncertainty in $m_b$ is not propagated into B3.
+
+## B1 and B2
+
+B1 fits subject-averaged waveforms, $\bar y_j = N_j^{-1} \sum_{n : j[n] = j} y_n$, with no trial level:
+$$
+\bar y_j = \alpha \mathbf{1} + B w + B u_j + \bar\varepsilon_j,
+$$
+where $\bar\varepsilon_j$ is AR($p$) with its own $\sigma \sim \mathrm{N}^+(0, 3^2)$, smaller because averaging about 180 trials shrinks the noise.
+B2 fits the single trials of one subject with trial deviations and no subject level.
+Both use the priors above for the components they contain.
+
+## Computation {#sec-spec-computation}
+
+None of what follows changes the model.
+Each step computes exactly the same posterior, and each was checked numerically against the step before it.
+
+### Whitening
+
+Let $\Sigma_\varepsilon = \sigma^2 R$.
+The AR prediction-error recursion defines a lower-triangular banded matrix $W$ with $W^\top W = \Sigma_\varepsilon^{-1}$.
+Row $i$ of $W e$ is the error in predicting $e_i$ from $e_{i-1}, \ldots, e_{i - \min(i-1, p)}$, divided by its prediction standard deviation $\sigma \sqrt{v_{\min(i-1,p)}}$, where $v_k = \prod_{l \le k} (1 - r_l^2)$.
+So $\log \lvert \Sigma_\varepsilon \rvert = \sum_i \log\big(\sigma^2 v_{\min(i-1,p)}\big)$, and no $T \times T$ matrix is formed or inverted.
+
+### Integrating out the trial deviations
+
+Given $\alpha$, $w$ and $u_j$, write $\mu_j = \alpha \mathbf{1} + B(w + u_j)$.
+Integrating over $v_n$ gives
+$$
+y_n \mid \mu_{j[n]} \sim \mathrm{N}(\mu_{j[n]},\, \Sigma),
+\qquad
+\Sigma = \Sigma_\varepsilon + B_c\, \mathrm{diag}(q)^2\, B_c^\top .
+$$
+With $Z = W B_c \,\mathrm{diag}(q)$ and $A = I + Z^\top Z = L L^\top$ (Cholesky), the Woodbury identity gives
+$$
+\Sigma^{-1} = W^\top W - \tilde W \tilde W^\top,
+\quad
+\tilde W = W^\top Z L^{-\top},
+\qquad
+\log\lvert\Sigma\rvert = \log\lvert\Sigma_\varepsilon\rvert + 2 \sum_{k} \log L_{kk}.
+$$
+Only $K_c \times K_c$ matrices are factorised.
+Writing it with $\mathrm{diag}(q)$ inside $A$, rather than $\mathrm{diag}(q)^{-2}$, keeps it well conditioned when some $q_k$ are near zero.
+
+### Sufficient statistics
+
+The log likelihood of all trials is
+$$
+-\frac{1}{2}\Big( N T \log 2\pi + N \log\lvert\Sigma\rvert + \sum_n (y_n - \mu_{j[n]})^\top \Sigma^{-1} (y_n - \mu_{j[n]}) \Big),
+$$
+and the sum of quadratic forms expands as
+$$
+\operatorname{tr}\big(\Sigma^{-1} S\big) - 2 \sum_j s_j^\top \Sigma^{-1} \mu_j + \sum_j N_j\, \mu_j^\top \Sigma^{-1} \mu_j,
+$$
+where $S = \sum_n y_n y_n^\top$ ($T \times T$), $s_j = \sum_{n : j[n] = j} y_n$, and $N_j$ is subject $j$'s number of trials.
+These are computed once from the data, so the cost per iteration does not depend on $N$.
+
+### Integrating out the subject deviations
+
+Let $m = \alpha\mathbf{1} + B w$, $G = B^\top \Sigma^{-1} B$, $h_j = B^\top \Sigma^{-1}(s_j - N_j m)$, and let $L_u$ be any square root of the subject prior covariance, $S_u = L_u L_u^\top$.
+Completing the square in $u_j$ and integrating it out gives, for each subject, the additional log-likelihood term
+$$
+-\frac{1}{2} \log \lvert P_j \rvert + \frac{1}{2}\, h_j^\top L_u P_j^{-1} L_u^\top h_j,
+\qquad
+P_j = I + N_j\, L_u^\top G L_u,
+$$
+added to the trial-level log likelihood evaluated at $\mu_j = m$.
+The conditional posterior of $u_j$ is Gaussian,
+$$
+u_j \mid \text{rest} \sim \mathrm{N}\big(L_u P_j^{-1} L_u^\top h_j,\ L_u P_j^{-1} L_u^\top\big),
+$$
+and one exact draw from it is made per posterior draw, to give each subject's waveform.
+For the dense block $L_u$ is taken as $R^{-\top}$, where $Q = R R^\top$, which avoids inverting $Q$.
+
+After both integrations the sampler sees only $\alpha$, $w$, the prior scales, $\sigma$ and $r$, about 65 parameters.
+It uses Stan's NUTS with a dense mass matrix, four chains of 1000 warmup and 1000 sampling iterations, and adapt_delta 0.9.
+
+## Predictors (B4) {#sec-spec-b4}
+
+B4 is B3 with a subject-level predictor $a_j$ and a trial-level predictor $x_n$, each with its own effect curve over time,
+$$
+y_n = \alpha \mathbf{1} + B w + a_{j[n]}\, B \gamma + x_n\, B \delta + B u_{j[n]} + B_c v_n + \varepsilon_n .
+$$
+
+- $a_j$ is subject $j$'s accuracy (proportion correct over all its trials) on the log-odds scale, $\operatorname{logit}(p_j) = \log\big(p_j / (1 - p_j)\big)$, standardised across subjects to mean 0 and sd 1.
+- $x_n$ is trial $n$'s numerosity ratio as $\log(\text{larger} / \text{smaller})$, standardised across trials to mean 0 and sd 1. Larger values are easier trials. Over this experiment's range the log is almost linear in the ratio (correlation $-0.999$ with smaller/larger), so the choice of scale makes little practical difference.
+- $g(t) = \sum_k \gamma_k \phi_k(t)$ is the acuity effect curve, the change in a subject's expected waveform per sd of log-odds accuracy.
+- $d(t) = \sum_k \delta_k \phi_k(t)$ is the ratio effect curve, the change in a trial's expected waveform per sd of log ratio.
+
+Both $\gamma$ and $\delta$ have the ridge-plus-curvature prior of the population weights, block by block, each with its own two scales per block, all $\mathrm{N}^+(0, 10^2)$.
+Because the predictors are centred, $f(t)$ is the waveform of a subject of average accuracy on a trial of average ratio.
+Both effects are assumed linear in the predictor, and there is no interaction between them.
+The subject-level deviations $u_j$ remain, so $g$ is the part of the between-subject variation that accuracy accounts for, and the rest stays in $u_j$.
+
+### Computation
+
+With $m_j = \alpha\mathbf{1} + B w + a_j B\gamma$ and $d = B\delta$, the sum of quadratic forms over trials becomes
+$$
+\sum_n (y_n - m_{j[n]} - x_n d)^\top \Sigma^{-1} (y_n - m_{j[n]} - x_n d)
+= Q_0 - 2 \Big( \sum_n x_n y_n - \sum_j X_j m_j \Big)^\top \Sigma^{-1} d + \Big(\sum_n x_n^2\Big)\, d^\top \Sigma^{-1} d,
+$$
+where $Q_0$ is the expression of @sec-spec-computation with $\mu_j = m_j$, and $X_j = \sum_{n : j[n] = j} x_n$.
+So the trial-level predictor needs three more sufficient statistics, $\sum_n x_n y_n$, the $X_j$, and $\sum_n x_n^2$, and the cost still does not depend on $N$.
+In the integral over the subject deviations, $h_j = B^\top \Sigma^{-1}(s_j - N_j m_j - X_j d)$.
+$\Sigma^{-1} d$ is computed as $W^\top W d - \tilde W \tilde W^\top d$.
+
+### Checking recovery
+
+The fitting script can add known effect curves to the real data before fitting: a 3 µV Gaussian bump at 270 ms (sd 30 ms) per unit of $a_j$, and a $-1.5$ µV bump at 170 ms (sd 20 ms) per unit of $x_n$.
+The difference between the effect curves estimated with and without the addition should then reproduce the added curves.
+This tests the derivation and the code against real EEG noise rather than idealised simulated noise.
+
+## Changes from the original design {#sec-spec-changes}
+
+These are the ways in which the sections that follow are out of date.
+
+1. The ridge-plus-curvature prior is one multivariate normal per block, as stated above, not two separate sampling statements.
+2. The coarse and dense blocks have separate width multipliers, and B3 fixes them at the B1 estimates.
+3. The dense block has 31 functions from 0 to 600 ms, not 8 from 0 to 300 ms. The original design underestimated P2p and N1 and left gaps between its narrow dense functions.
+4. Subject deviations use the full basis. Restricting them to the coarse block left individual P1, N1 and P2p differences unrepresentable.
+5. The subject-level prior is the mixture described above. Independent scales on every function let the subject level absorb the shared P1. The curvature prior on the coarse block as well flattened late subject waveforms.
+6. Trial and subject deviations are integrated out analytically, and sufficient statistics make the cost independent of the number of trials.
+
+Not yet included: choice of AR order, interactions between predictors, subject-varying predictor effects, and electrodes modelled jointly.
+
+
 # What the final model is
 
 Before the ladder, the destination, because each rung only makes sense as
@@ -406,8 +682,8 @@ longer be of order $10^2$. The implied AR(2) frequency should be
 recognisable. The posterior for $c$ should be inspected to see whether the
 nominal widths were about right.
 
-File: `rbf_b0_single_trial.stan`, driver `fit_b0.R`, frequentist counterpart
-`fit_b0_gls.R`.
+The single-trial model files were removed once the multilevel model worked.
+See `purge.md` for where to find them in the Git history.
 
 ## B1. Subject variability
 
@@ -761,7 +1037,7 @@ it rather than an argument against it.
 
 ## The AR parameterisation
 
-### The recursion
+### The recursion {#sec-spec-ar}
 
 Given partial autocorrelations $r_1, \dots, r_p$, each free in
 $(-1, 1)$, the Levinson-Durbin recursion produces the AR coefficients at

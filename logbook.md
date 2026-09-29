@@ -1,3 +1,114 @@
+# 29 September, 2026; 14:20
+
+The branch `get-rbf-stan-models-working-23-sept-2026` (23 to 29 September) has been squash-merged into main.
+It produced a working Bayesian multilevel radial basis function model of single-trial ERPs, fitted at POz, Oz, Pz, PO7 and PO8 to all adult trials, without predictors (B3) and with subject accuracy and trial ratio as predictors (B4).
+It also found that the stimulus sequence of the experiment was not randomised, which changes how any stimulus effect must be analysed.
+The branch's running log has been condensed into this entry.
+The branch tip before its clean-up is tagged `rbf-stan-branch-final`, and `purge.md` lists what was removed.
+
+## Agenda and deadline
+
+Jessica presents this project at a department in Plymouth on 14 October 2026.
+About 15 to 20 minutes of her talk concern it, mostly background on the approximate number system and its neural signatures, with five to ten minutes of results.
+The audience is not mathematical, so results are presented without technical detail on priors and the like.
+The results are work in progress, in the spirit of the BPS Cog 2026 talk, honest and neither overstated nor undersold.
+The message is that multilevel nonlinear regression with basis functions is a new and general method for ERP analysis, that it works on this data, and that it already gives preliminary answers to real questions.
+
+The deliverable is a Quarto deck rendered to PowerPoint, at most 20 slides, from which Jessica takes what she needs into her own deck.
+It is due to her by Saturday 3 October.
+The priorities are, in order, the adult modelling of three questions (corroborating the P1/N1 and P2/P2p signature at posterior electrodes, its variation with individual ANS acuity, and its variation with numerical ratio), then preprocessing the child data so that child ERPs can be shown, then behavioural results for adults and children.
+The plan for the rest of the week is in the next entry.
+
+The RBF model is to be completed for this phase and then succeeded by a Gaussian process version, which will probably be the model from then on.
+The RBF model's structure (basis placement, two density tiers, which basis functions each level may use, the subject-level prior) had to be repaired case by case as the data exposed problems.
+A Gaussian process states the same assumptions as one covariance function per level.
+The computational machinery built here (exact integration over subject and trial deviations, sufficient statistics, AR whitening) carries over to it.
+
+## The model
+
+The complete specification is the first section of `analysis/rbf_stan/models.qmd`, and the procedure is in `analysis/rbf_stan/readme.md`.
+At one electrode, each trial's waveform, decimated to 128 Hz, is a population waveform, plus its subject's deviation, plus its own deviation, plus AR(2) noise with parameters shared across all trials.
+Waveforms are built from Gaussian basis functions, 8 coarse ones over the whole epoch and 31 dense ones every 20 ms from 0 to 600 ms.
+The population weights have a ridge-plus-curvature prior with estimated scales, the penalised prior of a generalised additive model.
+Subject deviations use the full basis, with independent scales on the coarse block and the ridge-plus-curvature prior on the dense block.
+Trial deviations use the coarse block only.
+The width multipliers of the two blocks were estimated once per electrode from subject-averaged curves (B1) and are fixed thereafter.
+Trial and subject deviations are integrated out analytically, and the likelihood is computed from sufficient statistics, so the cost does not depend on the number of trials and the sampler sees about 30 to 65 parameters.
+
+B3 is this model without predictors.
+B4 adds effect curves over time for standardised log-odds accuracy (a subject-level predictor) and standardised log(larger/smaller) ratio (a trial-level predictor, larger meaning easier), plus the previous trial's ratio as a covariate.
+The effect curves use the full basis with the ridge-plus-curvature prior at fixed scales (ridge 5, curvature 10), like a fixed smoothing penalty.
+The first trial of each block is excluded (see below).
+Accuracy is the acuity measure rather than the Weber fraction, because every subject saw the same ratios, so the two carry essentially the same information and accuracy needs no explanation.
+
+Several parts of this design were forced by problems, and the reasons matter for the Gaussian process version.
+The ridge-plus-curvature prior must be stated as a single Gaussian with precision I/tau_r^2 + D'D/tau_c^2.
+Stated as two sampling statements it has the wrong normalising constant, which makes the posterior improper at zero scale when the scales are estimated, and this is why the original single-trial model collapsed to a flat line.
+The basis is strongly collinear, so NUTS needs a dense mass matrix.
+AR noise parameters cannot be estimated from the same single trial as the waveform, since in simulation the noise then absorbed most of the signal.
+Sharing them across trials, as the multilevel model does, identifies the time-locked waveform.
+With 8 dense functions to 300 ms the model underestimated P2p, and 31 to 600 ms fitted the mean of subject averages to within about 0.2 uV.
+With subject deviations on the coarse block only, individual N1 and P2p differences could not be represented.
+With independent scales on the full subject basis, the shared P1 moved out of the population waveform into the subject deviations, hence the hybrid subject prior.
+With estimated effect-curve scales, B4 shrank the ratio effect 2 to 8 times below the raw within-subject slope and let the subject deviations absorb the accuracy effect.
+The model's own subject waveforms had the right accuracy slope, but the effect curve was near zero.
+Fixed scales removed both problems, and realistic planted effects (1.5 uV per sd for accuracy, 0.3 uV per sd for ratio) were then recovered almost exactly.
+Leave-one-subject-out PSIS-LOO proved unusable for comparing designs (p_loo about 300 for 46 curves), so designs were judged against the mean of subject averages.
+
+## B3, the neural signature
+
+B3 fits took 2.3 to 2.6 hours per electrode, five in parallel, and all converged (R-hat at most 1.006, bulk ESS at least 1398, at most one divergence).
+The population waveform matches the mean of subject averages to within 0.3 to 0.6 uV from 0 to 600 ms and captures P1, N1, P2p and the late positivity at every electrode.
+The fitted subject waveforms follow each subject's average through every component and smooth over its noise.
+At POz the between-subject sd of the waveform is near zero before stimulus onset, peaks at about 6 uV near 170 ms (N1) and about 5 uV near 270 ms (P2p), and falls to about 1.5 uV by 1000 ms.
+So individual differences are largest at the components of interest.
+The Plymouth slides use B4 only, whose population waveform is the signature for an average subject on an average trial.
+B3 may be returned to, for example to show total between-subject variability rather than what remains after accuracy.
+
+## The stimulus sequence
+
+Every subject saw one fixed sequence of 50 trials, repeated identically as each of the four blocks, with 45 distinct stimulus pairs.
+The full account of its benefits, costs and remedies is in `notes/fixed-trial-sequence.md`.
+Two consequences were found in the data.
+The first trial of every block is the same hard pair (47 against 51 dots), and its ERP differs greatly from other trials (at POz at 253 ms, -2.2 against 5.9 uV), presumably because it follows a break.
+That alone manufactured an apparent ratio effect at the P2p latency, which disappears when first trials are excluded.
+Consecutive trials' ratios are also correlated (about 0.16), which carries activity from the previous trial into apparent ratio effects before stimulus onset.
+So every analysis excludes first trials and controls for the previous trial's ratio.
+Ratio is confounded with item identity and each item's fixed context, and its effective sample size is about 44 items, not 8300 trials, so ratio effects must be judged against variation between items, with pairs as a random factor crossed with subjects.
+The accuracy and population results are unaffected, since every subject saw identical stimuli.
+The experiment code (`mark-andrews/adak`) must be checked for a fixed seed and corrected before further data collection, and it must be established whether the child data used the same sequence.
+
+## B4 results
+
+The corrected B4 fits (first trials excluded, previous ratio, fixed effect scales) took 4.3 to 5.2 hours per electrode and all converged (R-hat at most 1.007, bulk ESS at least 1364, 0 to 4 divergences).
+
+Accuracy, reportable as preliminary.
+Higher-accuracy subjects have a more positive waveform at about 260 to 325 ms at POz and Oz, the P2p window, and at about 145 to 175 ms at PO7 and PO8, the N1 window, by about 1.3 to 1.7 uV per sd of accuracy at 300 ms at POz and Oz.
+These agree with the raw slopes of subject averages on accuracy.
+The bands are pointwise, and a pre-stimulus window at Pz shows that isolated false windows occur.
+The raw difference of 3 to 6 uV at about 165 ms between the higher-accuracy and lower-accuracy halves of subjects is not a reliable linear accuracy effect.
+
+Behaviour.
+The ratio manipulation works strongly, with accuracy rising from 0.60 in the hardest fifth of trials to 0.98 in the easiest, median RT falling from 0.90 to 0.70 s, and a positive slope of accuracy on log ratio in every one of 47 subjects.
+
+Ratio, preliminary.
+B4 treats trials as independent evidence about ratio, so its bands are too narrow.
+An item-level analysis, with single-trial mixed models at each timepoint having crossed random intercepts for subjects and the 44 pairs, finds easier trials more positive at about 350 to 375 ms at all five electrodes, by about 0.3 uV per sd of log ratio, with a later positivity at about 540 to 610 ms at POz and 420 to 610 ms at Pz, and a reversal after about 850 ms that overlaps the responses.
+B4 finds the same windows.
+The timing resembles the P3-range distance effect of Libertus and colleagues (2007) more than a P2p effect.
+
+The literature (`notes/ans-cognitive-neuroscience-literature.qmd`) does not lead us to expect large effects here.
+Published ERP ratio effects mostly compare one array with a reference held in memory, contrast ratios much further apart than ours (1.02 to 1.39, all hard), and differ in direction between studies.
+The individual-differences evidence (Pinhas and colleagues 2023, Paulsen and colleagues 2010) is mainly an acuity by ratio interaction, which B4 does not yet include.
+
+## Open
+
+Pairs as a random factor inside the RBF model is implemented (`items=1`) and its likelihood is checked against a brute-force computation, but it does not sample well.
+A 20-trial test hit the maximum tree depth on 98 per cent of transitions with R-hat up to 2.2, and the full runs launched on 28 September did not complete.
+The likely cause is that ratio is a property of each pair, so the ratio effect curve and the item deviations compete for the same variation, with the non-centred item deviations making it worse.
+Also open are an acuity by ratio interaction, the AR order (AR(2) throughout so far, with no settled criterion for choosing it), modelling electrodes jointly, updating `ppc_b4.R` for the current options, and the Gaussian process version.
+Posterior predictive checks and recovery tests with realistic effects are standing requirements for every model.
+
 # 23 September, 2026; 21:22
 
 Renamed the two basis-function modelling directories.

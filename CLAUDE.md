@@ -28,5 +28,6 @@ If unsure whether something rises to that level, ask rather than adding it.
 - `container/`: the Apptainer definition for the reproducible batch pipeline.
 - `.devcontainer/`: the Podman-based Dockerfile and devcontainer.json for interactive work in Positron.
   Deliberately a separate image from `container/`, see `readme.md` for why.
-- `raw-data/`: source EEG (`.bdf`) and behavioural (`.json`) data, from `mark-andrews/adak`.
+- Raw data: source EEG (`.bdf`) and behavioural (`.json`) data, not in this repository.
+  It is in `../purple-raw-data/data/{main,child}`, located through `raw_data_dir` in `config.yaml`.
 - `data/`: pipeline outputs, notably `data/main/merged_eeg_behaviour_data.parquet`.

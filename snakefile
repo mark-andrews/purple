@@ -1,6 +1,14 @@
+import os
+
 container: "container/purple.sif"
 
-INPUT_DIR = "raw-data/main"
+configfile: "config.yaml"
+
+# The raw data lives outside the repository (see config.yaml and the
+# readme). Apptainer only sees it if it is bound into the container, with
+# --apptainer-args "--bind <raw_data_dir>".
+RAW_DATA_DIR = os.path.abspath(config["raw_data_dir"])
+INPUT_DIR = RAW_DATA_DIR + "/main"
 OUTPUT_DIR = "data/main"
 TMP_DIR = "data/tmp"
 

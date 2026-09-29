@@ -1,5 +1,5 @@
 - sample_size_determination.R: a _very_ minimal attempt to justify why J=50 and N=200 in a random effects normal model is sufficient for basic differences of means type questions.
 - exploratory_analysis_behavioural_data.R: scripts for some preliminary exploration of the behavioural data
 - exploratory_analysis_behavioural_data.Rmd: Rmarkdown based powerpoint presentation showing some preliminary results and also describing some of the analysis. To be used by JD for a presentation in Nottingham University on 11 June.
-- rbf_stan/: the Bayesian basis-function (RBF) regression of single-trial ERP waveforms in Stan, models B0 to B4, and the current line of modelling work (see its README for the procedure).
+- rbf_stan/: the Bayesian basis-function (RBF) regression of single-trial ERP waveforms in Stan, models B1 to B4, and the current line of modelling work (see its readme for the procedure).
 - rbf_lme4/: the `lme4` smoke tests of the same basis-function models, used as checks on the Stan fits.

@@ -5,6 +5,31 @@ Deleted files remain in the Git history, but nothing in the working tree points 
 Entries are in reverse chronological order, most recent first.
 To recover a file, check it out from the commit before its deletion, for example `git checkout <commit>^ -- <path>`.
 
+# 29 September, 2026
+
+The clean-up of the branch `get-rbf-stan-models-working-23-sept-2026` before its squash merge into main.
+The squash merge does not bring the branch's own commits into main's history, so the branch tip before the clean-up is tagged `rbf-stan-branch-final`.
+Every file below can be recovered from that tag, for example `git checkout rbf-stan-branch-final -- analysis/rbf_stan/archive`, even after the branch is deleted.
+
+`analysis/rbf_stan/archive/`, in full.
+It held the single-trial B0 models and drivers (`rbf_b0_single_trial.stan`, `fit_b0.R`, `fit_b0_gls.R`, `extract_b0_trial.R`), the older multilevel driver `fit_multilevel.R`, the step-by-step ladder used to find why B0 failed (`rbf_ar_flat.stan`, `fit_rbf_ar_flat.R`, `rbf_b0_ladder.stan`, `fit_b0_ladder.R`), and scratch diagnostics (`scratch/`, including the simulation recovery test `sim_recovery.R` and width scans).
+What they established, the normalisation error in the weight prior, the need for a dense mass matrix, and that noise parameters cannot be estimated from one trial, is recorded in the logbook and in `models.qmd`.
+The first five files named above are also in main's history, at `3dc7abe`.
+
+`analysis/rbf_stan/rbf_b0_collapsed.stan`, the single-trial model with its weights integrated out.
+It worked, but nothing depends on it, and single-trial fits are not part of the analysis going forward.
+
+`analysis/rbf_stan/diagnose_b4_shrinkage.R`, the one-off diagnosis that B4 with estimated effect scales shrank the ratio effect and let the subject deviations absorb the accuracy effect.
+The finding is in the logbook, and led to fixed effect-curve scales.
+
+`analysis/rbf_stan/summarise_b3.R` and `summarise_b4.R`, figure and table scripts for the B3 and B4 fits, superseded by the results script for the Plymouth slides.
+
+`analysis/rbf_stan/modelfree_checks.R` and `item_level_ratio.R`, the model-free checks (behaviour by ratio, raw accuracy-half and easy-minus-hard differences) and the item-level analysis of ratio.
+Their content is carried into the results script for the Plymouth slides.
+
+`analysis/rbf_stan/run_fit.sh`, a launcher for the fit driver in the devcontainer image.
+Its ten-hour timeout could silently kill long fits.
+
 # 22 September, 2026, fourth pass
 
 The superseded first generation of the Stan single-trial work in `analysis/multilevel_rbf_stan/`.

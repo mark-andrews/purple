@@ -7,8 +7,12 @@ This project involves nonlinear regression modeling of ERP signals when people a
 ## Data and code provenance
 
 The behavioural data is from a PsychoPy based approximate number system experiment available in the GitHub repo `mark-andrews/adak`, version `0.1-0-g7310f94` (i.e. tag 0.1; short commit hash 7310f94).
-All the behavioural data files are the json files in `raw-data`.
-The EEG data are the bdf files in `raw-data`.
+The raw data are the EEG recordings (`.bdf` files) and the behavioural data (`.json` files), one pair per session.
+They are not in this repository, because they are too large for it.
+They are kept in a separate directory with one subdirectory per sample, `main` for the adults and `child` for the children.
+For now that directory is local, in a sibling project, `../purple-raw-data/data`.
+It will eventually be released through a public data repository.
+The pipeline finds it through `raw_data_dir` in `config.yaml`, so anyone reproducing the analysis downloads the raw data, puts it anywhere, and sets that one path.
 
 The data analysis is R and Python based.
 There are two separate ways of running that code, covered below: the reproducible batch pipeline, and interactive work.
@@ -28,11 +32,15 @@ This installs Python (`mne`, `mne-icalabel`, `autoreject`, `onnxruntime`, ...) a
 It takes a while, mostly spent compiling the R `arrow` package's C++ backend and the rest of `tidyverse` from source.
 `container/purple.sif` is a large binary build artefact and isn't tracked in git; rebuild it locally with the command above whenever it's missing.
 
-Then run the pipeline:
+Set `raw_data_dir` in `config.yaml` to the location of the raw data (see above), then run the pipeline:
 
 ```bash
-snakemake -j4 --sdm apptainer
+snakemake -j4 --sdm apptainer --apptainer-args "--bind /path/to/raw/data"
 ```
+
+The bind is needed because Apptainer only sees the working directory and the home directory by default, and the raw data is outside both.
+The path can also be given on the command line, with `--config raw_data_dir=/path/to/raw/data`.
+Snakemake itself runs on the host, not in the container, and can be installed with `pipx install snakemake`.
 
 Running time: around 2.5 hours (measured on 23 November, 2024; container overhead is minor).
 The end product is `data/main/merged_eeg_behaviour_data.parquet`, one row per EEG timepoint per trial, joined against the behavioural covariates for that trial.
