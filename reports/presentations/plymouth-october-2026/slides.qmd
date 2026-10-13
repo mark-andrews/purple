@@ -25,6 +25,9 @@ items <- read_result("items")
 models <- read_result("models")
 child_file <- file.path(res_dir, "child.rds")
 child <- if (file.exists(child_file)) readRDS(child_file) else NULL
+# Response time by ratio is computed by prepare_rt_results.R, which runs
+# in seconds on its own.
+rt <- read_result("rt")
 missing_plot <- function() {
   ggplot() + annotate("text", x = 0, y = 0, size = 6,
                       label = "Child results not yet computed") + theme_void()
@@ -131,6 +134,27 @@ ggplot(beh$curves, aes(ratio, p)) +
 ```
 
 
+## Behaviour: response time depends on ratio
+
+
+```{r}
+#| include: false
+rt_mean <- rt$adult$curves |> summarise(rt = mean(rt), .by = ratio) |> arrange(ratio)
+```
+
+Grey, each participant. Red, the average. Correct trials only. Response time falls from `r sprintf("%.2f", first(rt_mean$rt))` s at the hardest ratio to `r sprintf("%.2f", last(rt_mean$rt))` s at the easiest, and the slope is negative in `r sum(rt$adult$slopes$slope < 0)` of `r nrow(rt$adult$slopes)` participants.
+
+```{r}
+#| fig-width: 8
+#| fig-height: 5.5
+ggplot(rt$adult$curves, aes(ratio, rt)) +
+  geom_line(aes(group = subject), colour = "grey50", alpha = 0.35) +
+  geom_line(data = rt_mean, colour = accent, linewidth = 1.5) +
+  labs(x = "Ratio of larger to smaller array", y = "Response time on correct trials (s)") +
+  theme_slide
+```
+
+
 ## Behaviour: people differ in acuity
 
 
@@ -154,13 +178,14 @@ ggplot(beh$by_subject, aes(accuracy, median_rt)) +
 
 
 
-Anterior (AF), central (C) and posterior (P, PO) electrodes.
-The clear P1, N1 and P2p are at the posterior electrodes, where the ANS literature places them.
+Three parieto-occipital (PO) electrodes, at the back of the head, on the left (PO7), the midline (POz) and the right (PO8).
+P1, the positive peak near 115 ms, and N1, the dip that follows it, at about 140 to 200 ms, are general visual responses to the onset of any stimulus.
+P2p, the positive peak near 250 to 265 ms, is the component the literature links to numerosity.
 
 ```{r}
 #| fig-width: 8
-#| fig-height: 5.5
-sel <- c("AF3", "AFz", "AF4", "C3", "Cz", "C4", "PO7", "POz", "PO8", "P7", "Pz", "P8")
+#| fig-height: 4
+sel <- c("PO7", "POz", "PO8")
 erp$grand |>
   filter(channel %in% sel) |>
   mutate(channel = factor(channel, levels = sel)) |>
@@ -168,9 +193,17 @@ erp$grand |>
   geom_hline(yintercept = 0, colour = "grey80") +
   geom_line() +
   facet_wrap(~channel, ncol = 3) +
+  scale_x_continuous(breaks = c(0, 250, 500, 750)) +
   labs(x = xlab_time, y = "Voltage (µV)") +
   theme_minimal(base_size = 13)
 ```
+
+
+::: {.notes}
+P1 (about 80 to 130 ms) is generated in visual cortex and follows the physical stimulus, such as its contrast, size and the number of dots, and spatial attention. N1 (about 150 to 200 ms) is linked to attending to and discriminating the stimulus, and in the numerosity literature to tracking individual objects in small arrays (Hyde and Spelke, 2009). P2p (about 200 to 300 ms) varies with numerical ratio and with perceived, not only physical, numerosity (Libertus and colleagues, 2007. Grasso and colleagues, 2022). A posterior P2 follows any visual stimulus, so what is specific to number is how P2p varies with numerosity, not that it occurs.
+
+N1 is named for the direction of the deflection, not the sign of the voltage. In this grand average it returns only to about zero, because it sits on top of overlapping positive components and because its timing differs between people, which flattens it in the average. In individual participants the dip is negative in about three quarters of them, at typically 3 to 4 microvolts below zero.
+:::
 
 
 ## Posterior electrodes, participant by participant
@@ -460,15 +493,36 @@ if (is.null(child)) missing_plot() else {
 }
 ```
 
-## Children: grand-average ERPs
+## Children: response time
 
-Children (red) and adults (black), at the same electrodes as before.
-At posterior electrodes the children show a large positivity near 155 ms and a negativity near 230 ms, possibly the P1 and N1, larger and later than in adults.
-The recordings are clearly usable. A first look only.
+```{r}
+#| include: false
+ch_rt_mean <- rt$child$curves |> summarise(rt = mean(rt), .by = ratio) |> arrange(ratio)
+```
+
+Correct trials only. Children's response time falls from `r sprintf("%.2f", first(ch_rt_mean$rt))` s at the hardest ratio to `r sprintf("%.2f", last(ch_rt_mean$rt))` s at the easiest, and the slope is negative in `r sum(rt$child$slopes$slope < 0)` of `r nrow(rt$child$slopes)` children.
+Grey, each child. Red, the children's average. Black, the adults' average.
 
 ```{r}
 #| fig-width: 8
 #| fig-height: 5.5
+ggplot(rt$child$curves, aes(ratio, rt)) +
+  geom_line(aes(group = subject), colour = "grey50", alpha = 0.35) +
+  geom_line(data = ch_rt_mean, colour = accent, linewidth = 1.5) +
+  geom_line(data = rt_mean, colour = "black", linewidth = 1.2) +
+  labs(x = "Ratio of larger to smaller array", y = "Response time on correct trials (s)") +
+  theme_slide
+```
+
+## Children: grand-average ERPs
+
+Children (red) and adults (black), at the same parieto-occipital electrodes as before.
+The children show a large positivity near 155 ms and a negativity near 230 ms, possibly the P1 and N1, larger and later than in adults.
+The recordings are clearly usable. A first look only.
+
+```{r}
+#| fig-width: 8
+#| fig-height: 4
 if (is.null(child)) missing_plot() else {
   bind_rows(child$grand |> mutate(group = "Children"),
             erp$grand |> mutate(group = "Adults")) |>
@@ -479,6 +533,7 @@ if (is.null(child)) missing_plot() else {
     geom_line() +
     scale_colour_manual(values = c(Adults = "black", Children = accent)) +
     facet_wrap(~channel, ncol = 3) +
+    scale_x_continuous(breaks = c(0, 250, 500, 750)) +
     labs(x = xlab_time, y = "Voltage (µV)") +
     theme_minimal(base_size = 13) + theme(legend.position = "top", legend.title = element_blank())
 }
@@ -487,6 +542,29 @@ if (is.null(child)) missing_plot() else {
 ::: {.notes}
 `r if (!is.null(child)) sprintf("Usable trials per child at POz after artefact rejection and masking: median %d of %d, range %d to %d.", round(median(child$usable$n_usable)), round(median(child$usable$n_trials)), min(child$usable$n_usable), max(child$usable$n_usable))`
 :::
+
+## Children: grand-average ERPs, children only
+
+The children's grand average at the same parieto-occipital electrodes as before.
+The children show a large positivity near 155 ms and a negativity near 230 ms, possibly the P1 and N1.
+The recordings are clearly usable. A first look only.
+
+```{r}
+#| fig-width: 8
+#| fig-height: 4
+if (is.null(child)) missing_plot() else {
+  child$grand |>
+    filter(channel %in% sel) |>
+    mutate(channel = factor(channel, levels = sel)) |>
+    ggplot(aes(time, voltage)) +
+    geom_hline(yintercept = 0, colour = "grey80") +
+    geom_line(colour = accent) +
+    facet_wrap(~channel, ncol = 3) +
+    scale_x_continuous(breaks = c(0, 250, 500, 750)) +
+    labs(x = xlab_time, y = "Voltage (µV)") +
+    theme_minimal(base_size = 13)
+}
+```
 
 ## Children: posterior electrodes, child by child
 

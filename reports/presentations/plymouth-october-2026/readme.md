@@ -24,6 +24,15 @@ Every random step is seeded, so a rerun with the same container image on the sam
 The header of the script lists its options, including `test=1`, a quick check of the whole pipeline that writes to `results-test/`, and `stage=`, which runs only some stages.
 `results/provenance.txt` records the commit and package versions a run used, and the fit logs are in `results/fits/`.
 
+The two slides of response time against ratio read `results/rt.rds`, which a separate script, `prepare_rt_results.R`, writes from the two behaviour CSVs alone.
+It runs in about a second on the host, from the repository root, and needs only `tidyverse`:
+
+```bash
+Rscript reports/presentations/plymouth-october-2026/prepare_rt_results.R
+```
+
+It is separate only so that these slides could be added without rerunning the rest, and it should be folded into `prepare_results.R` when the deck is tidied up.
+
 Second, render the slides from this directory:
 
 ```bash

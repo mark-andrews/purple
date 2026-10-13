@@ -2,7 +2,80 @@
 
 ## Overview
 
-This project involves nonlinear regression modeling of ERP signals when people are performing an approximate number system task.
+This project is code-named Purple.
+It is an EEG study of the approximate number system (ANS), using multilevel nonlinear regression of single-trial ERP waveforms recorded while people perform an ANS task.
+Adults and children judged which of two dot arrays was the more numerous.
+
+## Planned papers
+
+This one research project is planned to lead to three separate papers.
+Each has a code name, used throughout the project in place of phrases like "the adult paper", which become ambiguous when several adult or child EEG papers are in circulation.
+
+| Code name | Paper | Order |
+|---|---|---|
+| Meredith | The adult paper | First |
+| Bolton | The child and development paper | Second |
+| Hayden | The methodological paper | Third |
+
+The papers are written in that order, one after another and not at the same time.
+The names stand unless different names turn out to have been assigned elsewhere already, in which case this section is revised.
+
+### Meredith, the adult paper
+
+Meredith uses the adult data only and does not mention the children's data.
+Its question is what the neural signatures of the approximate number system are.
+Every research question under that heading is addressed with multilevel nonlinear regression.
+The method is a major strength of the paper and is presented in full detail, but it is the method and not the subject.
+A paper that uses linear mixed-effects models is not a paper about linear mixed-effects models, and the same holds here.
+
+The research questions come from the open questions in the BPS Cognitive Section 2026 talk (`reports/presentations/bps-cog-2026/slides.qmd`, the "Open Questions" slide).
+
+- What is the pattern, and where is it?
+  Is there a P1, N1 and P2p complex, as others have reported, can it be established with hard, independent evidence, and at which scalp electrodes is it concentrated?
+- How much does it vary?
+  A pattern in an average may be an artefact of averaging, and averaging may also conceal patterns that are present.
+  The paper should show that the signatures occur trial by trial, and how they vary across trials, stimuli and individuals.
+  This is why the model must be multilevel and nonlinear.
+- Individual differences.
+  How do individual differences in the whole waveform, not only P2p amplitude, relate to behavioural ANS acuity?
+- Stimulus properties.
+  How does the waveform vary with stimulus properties, numerical ratio or difficulty above all, but others too?
+
+The last two open questions on that slide, on developmental trajectory and atypical numerical development, are not addressed in Meredith.
+Further questions will arise as the work proceeds.
+A working title is "The Neural Signatures of Numerical Processing: An Investigation Using Multilevel Non-Linear Regression", or something along those lines.
+
+### Bolton, the child and development paper
+
+Bolton asks the same questions as Meredith of the children's data, and also compares children with adults.
+The comparison is one statistical analysis of both datasets together, not a child analysis and an adult analysis set side by side.
+So the paper is both a replication of the adult analysis in children and a developmental comparison.
+Age as a continuum would be ideal, but there is probably too little data for that.
+At the least, younger children can be compared with adults, and possibly younger children, older children and adults.
+That is not yet known.
+It uses multilevel nonlinear regression throughout.
+
+### Hayden, the methodological paper
+
+Hayden is a purely methodological paper on how to analyse ERPs with multilevel nonlinear regression, which we expect to mean multilevel Gaussian processes.
+Multilevel Gaussian processes are rare in psychology and neuroscience, and rarer still for ERPs, which is the point of the paper.
+
+The motivation is as follows.
+An ERP waveform is plainly a nonlinear function of time.
+It varies between trials and between subjects, and it changes with stimulus properties and individual characteristics.
+The noise is not independent normal noise around a line, since it is autocorrelated in time.
+Given both facts, the question is how to do the equivalent of multilevel linear regression, which everyone knows, for data of this kind.
+The answer is multilevel Gaussian processes.
+
+The method has so far been developed with finite radial basis functions (`analysis/rbf_stan/`).
+That works, but it has become overly complicated, and a Gaussian process version should be simpler to work with in practice and do a better job.
+
+The paper illustrates the method on one to three datasets.
+These should have well-established and uncontroversial research questions and ERP responses, so that attention stays on the method and not on the validity of a paradigm.
+Open data are strongly preferred.
+Which datasets is not yet decided.
+The current inclination is not to use the Purple dots data in Hayden at all, so that the paper is not distracted by the specifics of the ANS task.
+Hayden is nevertheless a product of this project, of its methods and not of its findings.
 
 ## Data and code provenance
 

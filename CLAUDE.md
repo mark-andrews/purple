@@ -4,6 +4,17 @@ This project analyses EEG data from an Approximate Number System (ANS) experimen
 Participants judge which of two dot arrays is more numerous, and the primary analysis fits a multilevel nonlinear regression to single-trial ERP waveforms.
 See `logbook.md` for the current abstract and analysis status, and `readme.md` for data provenance and how to run things.
 
+The project is code-named Purple, and is planned to lead to three papers, each with a code name.
+Use these names, not phrases like "the adult paper".
+
+- Meredith: the adult paper, on the neural signatures of the ANS, adult data only. First priority.
+- Bolton: the child and development paper, the same questions in children plus a joint child and adult analysis. Second.
+- Hayden: the methodological paper, on multilevel nonlinear regression (Gaussian processes) for ERPs. Third.
+
+They are done in that order, not simultaneously.
+In Meredith and Bolton, multilevel nonlinear regression is the method and not the subject.
+The full description of each paper is in the "Planned papers" section of `readme.md`.
+
 This is a research and data analysis project, not a software project.
 There is no expectation of test suites, CI pipelines, or general-purpose library design.
 Judge changes by whether the analysis is faithful to the data and the statistical model, and reproducible, not by typical software engineering conventions.

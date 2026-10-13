@@ -1,3 +1,99 @@
+# 13 October, 2026; 12:28
+
+Statement of what this project is for, and the papers it is to produce.
+The full description is in the "Planned papers" section of `readme.md`.
+
+The project is code-named Purple.
+It is planned to lead to three separate papers, and I am committed to keeping that on track.
+Each paper has a code name, to be used in place of phrases like "the adult paper".
+The names stand unless I turn out to have assigned different ones elsewhere.
+
+Meredith is the adult paper.
+It uses the adult data only and does not mention the children.
+Its question is what the neural signatures of the approximate number system are.
+Its research questions are the first three open questions of the BPS Cognitive Section 2026 talk, together with the prior question of what the pattern is and where it is seen.
+That is, whether there is a P1, N1 and P2p complex and at which electrodes, how much it varies across trials, stimuli and individuals, how individual differences in the whole waveform relate to behavioural acuity, and how the waveform varies with stimulus properties, ratio above all.
+Multilevel nonlinear regression is the method throughout and a major strength of the paper, presented in full, but it is not the subject of the paper.
+
+Bolton is the child and development paper.
+It asks the same questions of the children's data and compares children with adults in one statistical analysis of both datasets, not two analyses side by side.
+Age as a continuum would be ideal, but there is probably too little data, so the comparison may be of younger children with adults, or of younger children, older children and adults.
+
+Hayden is the methodological paper, on ERP analysis with multilevel nonlinear regression, which we expect to mean multilevel Gaussian processes.
+It is to be illustrated on one to three datasets with well-established, uncontroversial ERP effects, open data preferred, not yet chosen.
+The current inclination is not to use the Purple data in it at all.
+It is a product of this project's methods and not of its findings.
+
+The order of work is Meredith, then Bolton, then Hayden, in sequence and not at the same time.
+
+# 13 October, 2026; 11:00
+
+Some thoughts on a finding that surprised me, recorded as a matter that needs more thought and not as a conclusion.
+I had expected the neural signature of the approximate number system, and the P2p in particular, to change with stimulus difficulty.
+So far it does not appear to.
+
+## The concerns
+
+The P2p is the component the literature treats as the candidate signature of ANS processing.
+Libertus and colleagues (2007) report a numerical distance effect on it, with a larger P2p for values near the standard than for values far from it.
+In our adult data the P2p peaks at about 251 to 264 ms at PO7, POz and PO8, at 5 to 6 uV.
+The ratio effects we have found are elsewhere, at about 350 to 375 ms at all five electrodes and at about 390 to 620 ms at Pz.
+Those are not P2p effects.
+If the signature does not vary with difficulty, when that of all things should, it seems to cast doubt on the validity of the whole analysis.
+The second concern is whether the fixed, non-random trial sequence has damaged the data in a way that explains this.
+
+There is a related and smaller puzzle about the N1.
+In the adult grand average there is a P1, a return to about zero, and then the P2p, with no clearly negative deflection between them.
+
+## Responses so far
+
+The absence of a P2p ratio effect is a real feature of the results and not only noise.
+In the item-level analysis (crossed random intercepts for subjects and the 44 pairs), the ratio effect at 250 to 265 ms is within 0.06 uV of zero per standard deviation of log ratio at all five electrodes, with 90% intervals of roughly plus or minus 0.27 uV.
+Our ratios span about 3.7 standard deviations of log ratio, so a change in P2p amplitude of more than about 1 uV between the hardest and easiest trials is ruled out.
+A smaller effect is not.
+
+The direction expected from the literature is a larger P2p on harder trials, since values near the standard are the harder comparisons.
+I had been assuming the opposite.
+
+The prediction may not transfer to our task, for four reasons.
+The comparison-to-standard studies show a single array and compare it with a standard held in memory, so their P2p is evoked by one numerosity, whereas ours is evoked by a simultaneous pair.
+No study in `notes/ans-cognitive-neuroscience-literature.qmd` shows a P2p ratio effect for simultaneous pairs.
+Their near and far conditions differ greatly in ratio, whereas ours run only from 1.02 to 1.39, all hard by their standards.
+Their own nonsymbolic evidence is mixed, since the effect reversed in their first experiment, which they attribute to a sensory confound in small arrays, and the expected direction appeared only in a second experiment with large arrays.
+Libertus and colleagues also report a later P3, at about 400 to 500 ms, that is larger for far, easier comparisons, and our effect at Pz matches that in timing and direction.
+
+The fixed sequence costs power and interpretability, but probably did not produce this null.
+It leaves 44 items as the effective sample for ratio, and ratio cannot be separated from each item's fixed position and neighbours.
+The one distortion found, the first trial of each block, created a spurious P2p ratio effect and did not hide a real one.
+The population waveform and the accuracy results are unaffected, since every subject saw identical stimuli.
+
+On this reading the validity of the model and the data is not in doubt.
+Behaviour shows the ratio manipulation working in every participant, and the model recovers the signature and the individual differences.
+What is in doubt is our own assumption that P2p amplitude should track ratio in this paradigm, which the literature has not tested for simultaneous pairs.
+This is an argument and not a demonstration, and I am not yet satisfied by it.
+
+On the N1, a component is named for the direction of its deflection and not for the sign of the voltage.
+The grand-average trough is at about zero (-0.1 uV at PO7 and PO8, -0.7 uV at POz).
+In the individual subject averages the trough is negative in 34 to 38 of 47 subjects, depending on the electrode, with a median of about -3 to -4 uV, though taking each subject's minimum in a window is biased somewhat negative by noise.
+The troughs fall at different times in different subjects, which flattens them in the grand average, and the N1 also overlaps the tail of the P1 and the rise of the P2p.
+The children's grand-average N1 is plainly negative, at about -4.5 to -6 uV near 230 ms.
+
+## Not yet tested
+
+Latency.
+The ratio analyses test amplitude at fixed times, so a shift in the timing of the P2p with difficulty has not been tested directly.
+
+Total numerosity.
+The P2p literature for single arrays concerns the number of dots and not ratio.
+Our totals run from 84 to 111 dots and are uncorrelated with log ratio across the 44 items (r = -0.01), so this is a clean test.
+
+The acuity by ratio interaction, which is where the individual-differences literature reports its effects.
+
+The comparison with the blob control task, which is the direct test of whether the P2p is specific to number.
+
+Total numerosity and the blob comparison look like the first two to do.
+There is more to discuss here, including whether a paradigm with simultaneous pairs and a narrow range of ratios can show a P2p difficulty effect at all.
+
 # 29 September, 2026; 19:15
 
 First look at the child data, in the course of setting up its preprocessing.
